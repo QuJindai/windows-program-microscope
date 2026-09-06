@@ -50,6 +50,12 @@ Run the contract tests:
 py -m unittest discover -s tests -v
 ```
 
+Export the same failure trace for Perfetto's web UI:
+
+```powershell
+py -m adapters.perfetto_export trace\sample-failure.json trace\sample-failure.perfetto.json
+```
+
 Create and verify a portable source package:
 
 ```powershell
