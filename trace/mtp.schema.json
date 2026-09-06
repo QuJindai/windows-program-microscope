@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/QuJindai/windows-program-microscope/mtp.schema.json",
+  "title": "Microscope Trace Protocol v0.1",
+  "type": "object",
+  "required": ["schema_version", "run", "nodes", "threads", "events", "values", "edges", "evidence", "io"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "0.1"},
+    "run": {
+      "type": "object",
+      "required": ["id", "name", "status", "duration_ms", "target", "capture_mode", "summary"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "status": {"enum": ["running", "completed", "failed", "cancelled"]},
+        "duration_ms": {"type": "number", "minimum": 0},
+        "started_at": {"type": "string"},
+        "capture_mode": {"enum": ["observe", "deep_trace", "time_travel"]},
+        "target": {"type": "object"},
+        "summary": {"type": "object"}
+      }
+    },
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
+    "threads": {"type": "array", "items": {"type": "object"}},
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}},
+    "values": {"type": "array", "items": {"type": "object"}},
+    "edges": {"type": "array", "items": {"type": "object"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "io": {"type": "array", "items": {"type": "object"}},
+    "changes": {"type": "array", "items": {"type": "object"}}
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "kind", "label"],
+      "properties": {
+        "id": {"type": "string"},
+        "kind": {"type": "string"},
+        "label": {"type": "string"},
+        "module": {"type": "string"},
+        "source": {"type": "string"},
+        "status": {"enum": ["executed", "skipped", "unknown"]}
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "kind", "start_ms", "duration_ms", "label", "status"],
+      "properties": {
+        "id": {"type": "string"},
+        "kind": {"type": "string"},
+        "phase": {"type": "string"},
+        "start_ms": {"type": "number", "minimum": 0},
+        "duration_ms": {"type": "number", "minimum": 0},
+        "thread_id": {"type": ["integer", "string"]},
+        "node_id": {"type": "string"},
+        "label": {"type": "string"},
+        "status": {"type": "string"},
+        "outcome": {"type": "string"},
+        "details": {"type": "object"},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["id", "truth", "source", "detail"],
+      "properties": {
+        "id": {"type": "string"},
+        "truth": {"enum": ["REAL", "DERIVED", "UNAVAILABLE", "DEBUG_ONLY"]},
+        "source": {"type": "string"},
+        "detail": {"type": "string"}
+      }
+    }
+  }
+}
+
