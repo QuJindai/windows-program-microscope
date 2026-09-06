@@ -85,10 +85,19 @@ return 0;
 
 static void WriteTrace(CollectorOptions options, Process process, List<MtpEvent> events, IEnumerable<MtpNode> nodes, IEnumerable<MtpThread> threads, List<MtpEvidence> evidence, long durationMs)
 {
+    var targetPath = "unresolved";
+    try
+    {
+        targetPath = process.MainModule?.FileName ?? targetPath;
+    }
+    catch (Exception error)
+    {
+        evidence.Add(new("ev_target_path", "UNAVAILABLE", "Process access", $"Executable path unavailable: {error.Message}"));
+    }
     var document = new MtpDocument(
         "0.1",
         new MtpRun("captured", $"{process.ProcessName} · Observe", "completed", durationMs,
-            "observe", new MtpTarget(process.ProcessName, process.Id, process.MainModule?.FileName ?? "unresolved", "x64", "Windows"),
+            "observe", new MtpTarget(process.ProcessName, process.Id, targetPath, "x64", "Windows"),
             new Dictionary<string, object?> { ["headline"] = "ETW capture completed", ["now"] = "Observed process events", ["threads"] = threads.Count(), ["modules"] = nodes.Count(n => n.Kind == "module"), ["exceptions"] = 0 }),
         nodes.ToArray(), threads.ToArray(), events.OrderBy(e => e.StartMs).ToArray(), Array.Empty<object>(), Array.Empty<object>(), evidence.ToArray(), Array.Empty<object>());
     var json = JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
