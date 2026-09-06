@@ -65,15 +65,10 @@ session.Source.Kernel.ProcessStop += data => AddEvent(data, "process", "Process 
 session.Source.Kernel.ThreadStart += data => AddEvent(data, "thread", "Thread start", "thread");
 session.Source.Kernel.ImageLoad += data => AddEvent(data, "module", "Image load", "module");
 
-using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(options.DurationSeconds));
-cancel.Token.Register(() => session.Dispose());
+using var stopTimer = new Timer(_ => session.Source.StopProcessing(), null, options.DurationSeconds * 1000, Timeout.Infinite);
 try
 {
     session.Source.Process();
-}
-catch (ObjectDisposedException)
-{
-    // Expected when the duration timer closes the session.
 }
 catch (Exception error)
 {
