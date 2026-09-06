@@ -16,6 +16,7 @@ Environment: Linux sandbox (Python 3.12, Node.js 24); Windows collector build is
 | `python -m unittest discover -s tests -v` | 8 tests passed |
 | `node --check app/app.js` | passed |
 | `python -m json.tool` for schema and both fixtures | passed |
+| `python -m adapters.perfetto_export` + JSON parse | passed; slices and derived counter preserved |
 | In-process HTTP smoke test for `/`, `/api/runs`, `/api/trace/failure`, `/api/summary/failure` | all HTTP 200 |
 | Derived network-wait calculation on failure fixture | 65.7% (raw event aggregation) |
 | `python tools/package.py` extraction verification | passed; 35 files; SHA-256 recorded in `dist/manifest.json` |
