@@ -18,7 +18,7 @@ Environment: Linux sandbox (Python 3.12, Node.js 24); Windows collector build is
 | `python -m json.tool` for schema and both fixtures | passed |
 | In-process HTTP smoke test for `/`, `/api/runs`, `/api/trace/failure`, `/api/summary/failure` | all HTTP 200 |
 | Derived network-wait calculation on failure fixture | 65.7% (raw event aggregation) |
-| `python tools/package.py` extraction verification | passed; 30 files; SHA-256 recorded in `dist/manifest.json` |
+| `python tools/package.py` extraction verification | passed; 32 files; SHA-256 recorded in `dist/manifest.json` |
 
 ## Windows handoff checks
 
@@ -31,4 +31,3 @@ dotnet run --project collector\windows -- --pid <PID> --duration 20 --out trace\
 ```
 
 The collector is not claimed as hardware-tested in this sandbox because ETW and an actual Windows PID are unavailable here. A provider or permission failure is expected to appear as `UNAVAILABLE` evidence in the output rather than a fabricated event.
-
