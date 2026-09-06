@@ -21,7 +21,16 @@ if (options.Pid <= 0)
     return 2;
 }
 
-var process = Process.GetProcessById(options.Pid);
+Process process;
+try
+{
+    process = Process.GetProcessById(options.Pid);
+}
+catch (Exception error)
+{
+    Console.Error.WriteLine($"Could not open PID {options.Pid}: {error.Message}");
+    return 1;
+}
 var started = Stopwatch.StartNew();
 var events = new List<MtpEvent>();
 var evidence = new List<MtpEvidence>
@@ -34,6 +43,11 @@ var sessionName = $"ProgramMicroscope-{Environment.ProcessId}-{Guid.NewGuid():N}
 
 using var session = new TraceEventSession(sessionName);
 session.StopOnDispose = true;
+Console.CancelKeyPress += (_, cancelArgs) =>
+{
+    cancelArgs.Cancel = true;
+    session.Dispose();
+};
 try
 {
     session.EnableKernelProvider(KernelTraceEventParser.Keywords.Process |
