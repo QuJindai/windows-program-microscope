@@ -1,0 +1,64 @@
+{
+  "schema_version": "0.1",
+  "run": {
+    "id": "normal",
+    "name": "Run A · Normal",
+    "status": "completed",
+    "started_at": "2026-09-06T10:17:00.000Z",
+    "duration_ms": 9412,
+    "capture_mode": "observe",
+    "target": {"name": "MyApp.exe", "pid": 8420, "path": "C:\\Apps\\MyApp\\MyApp.exe", "arch": "x64", "os": "Windows 11"},
+    "summary": {"headline": "Completed successfully", "now": "Updating the document", "cpu_percent": 18, "memory_mb": 604, "threads": 14, "modules": 37, "network_connections": 1, "exceptions": 0, "wait_percent": 0}
+  },
+  "nodes": [
+    {"id": "startup", "kind": "phase", "label": "Startup", "module": "MyApp.exe", "source": "main.cpp:52", "status": "executed"},
+    {"id": "load_config", "kind": "function", "label": "Load config", "module": "MyApp.exe", "source": "config.cpp:81", "status": "executed"},
+    {"id": "connect_device", "kind": "function", "label": "Connect device", "module": "Device.dll", "source": "device.cpp:90", "status": "executed"},
+    {"id": "read_device", "kind": "function", "label": "Read device", "module": "Device.dll", "source": "device.cpp:144", "status": "executed"},
+    {"id": "parse_response", "kind": "function", "label": "Parse response", "module": "MyApp.exe", "source": "state.cpp:278", "status": "executed"},
+    {"id": "check_crc", "kind": "function", "label": "CheckCRC", "module": "MyApp.exe", "source": "crc.cpp:217", "status": "executed"},
+    {"id": "process_data", "kind": "function", "label": "Process data", "module": "MyApp.exe", "source": "state.cpp:301", "status": "executed"},
+    {"id": "complete", "kind": "phase", "label": "Complete", "module": "MyApp.exe", "source": "main.cpp:72", "status": "executed"}
+  ],
+  "threads": [
+    {"id": 1, "name": "Main", "state": "Running", "cpu_ms": 312},
+    {"id": 11, "name": "Device I/O", "state": "Sleeping", "cpu_ms": 88},
+    {"id": 14, "name": "Worker", "state": "Waiting", "cpu_ms": 412}
+  ],
+  "events": [
+    {"id": "n1", "kind": "user_action", "phase": "Startup", "start_ms": 0, "duration_ms": 18, "thread_id": 1, "node_id": "startup", "label": "Click Open", "status": "ok", "outcome": "open_requested", "details": {"control": "Open", "input": "D:\\projects\\demo"}, "evidence_ids": ["ev_user"]},
+    {"id": "n2", "kind": "function", "phase": "Load config", "start_ms": 18, "duration_ms": 403, "thread_id": 1, "node_id": "load_config", "label": "Load config", "status": "ok", "outcome": "config_loaded", "details": {"file": "config.ini", "bytes": 1204}, "evidence_ids": ["ev_process", "ev_file"]},
+    {"id": "n3", "kind": "network", "phase": "Connect device", "start_ms": 421, "duration_ms": 1694, "thread_id": 11, "node_id": "connect_device", "label": "Connect device", "status": "ok", "outcome": "connected", "details": {"endpoint": "10.42.17.8:5023"}, "evidence_ids": ["ev_network"]},
+    {"id": "n4", "kind": "network", "phase": "Read device", "start_ms": 2115, "duration_ms": 5987, "thread_id": 14, "node_id": "read_device", "label": "Read device", "status": "ok", "outcome": "4096_bytes", "details": {"bytes_received": 4096}, "evidence_ids": ["ev_network"]},
+    {"id": "n5", "kind": "function", "phase": "Parse response", "start_ms": 8102, "duration_ms": 152, "thread_id": 14, "node_id": "parse_response", "label": "Parse response", "status": "ok", "outcome": "19_records", "details": {"buffer": "response.json", "bytes": 49152}, "evidence_ids": ["ev_process"]},
+    {"id": "n6", "kind": "function", "phase": "CheckCRC", "start_ms": 8254, "duration_ms": 114, "thread_id": 14, "node_id": "check_crc", "label": "CheckCRC", "status": "ok", "outcome": "crc_ok", "details": {"expected": "0x3F2A", "actual": "0x3F2A"}, "evidence_ids": ["ev_process"]},
+    {"id": "n7", "kind": "function", "phase": "Process data", "start_ms": 8368, "duration_ms": 144, "thread_id": 14, "node_id": "process_data", "label": "Process data", "status": "ok", "outcome": "state_updated", "details": {"records": 19}, "evidence_ids": ["ev_process"]},
+    {"id": "n8", "kind": "phase", "phase": "Complete", "start_ms": 8512, "duration_ms": 900, "thread_id": 1, "node_id": "complete", "label": "Complete", "status": "ok", "outcome": "success", "details": {}, "evidence_ids": ["ev_process"]}
+  ],
+  "values": [
+    {"id": "v_expected_crc", "name": "expectedCrc", "type": "uint16_t", "value": "0x3F2A", "event_id": "n6"},
+    {"id": "v_actual_crc", "name": "actualCrc", "type": "uint16_t", "value": "0x3F2A", "event_id": "n6"},
+    {"id": "v_result", "name": "result", "type": "bool", "value": "true", "event_id": "n7"}
+  ],
+  "edges": [
+    {"id": "e_read_response", "from": "n4", "to": "v_actual_crc", "type": "CAUSES", "label": "device response"},
+    {"id": "e_crc", "from": "v_actual_crc", "to": "v_result", "type": "CAUSES", "label": "CRC OK"}
+  ],
+  "evidence": [
+    {"id": "ev_user", "truth": "REAL", "source": "window.message", "detail": "WM_COMMAND for the Open control"},
+    {"id": "ev_process", "truth": "REAL", "source": "ETW process/thread provider", "detail": "Process and thread timestamps"},
+    {"id": "ev_file", "truth": "REAL", "source": "ETW file provider", "detail": "config.ini read"},
+    {"id": "ev_network", "truth": "REAL", "source": "ETW TCP/IP provider", "detail": "Connection and 4096-byte response"},
+    {"id": "ev_cpu", "truth": "DERIVED", "source": "event aggregation", "detail": "CPU percentage derived from sampled thread time"},
+    {"id": "ev_registry_unavailable", "truth": "UNAVAILABLE", "source": "capture capabilities", "detail": "Registry provider was not enabled in Observe mode"}
+  ],
+  "io": [
+    {"id": "io1", "type": "file", "operation": "read", "path": "config.ini", "start_ms": 25, "duration_ms": 11, "status": "ok", "thread_id": 1, "caller": "LoadSettings"},
+    {"id": "io2", "type": "network", "operation": "tcp_connect", "endpoint": "10.42.17.8:5023", "start_ms": 421, "duration_ms": 38, "status": "ok", "thread_id": 11, "caller": "DeviceClient::Connect"},
+    {"id": "io3", "type": "network", "operation": "tcp_read", "endpoint": "10.42.17.8:5023", "start_ms": 2115, "duration_ms": 5987, "status": "ok", "bytes_received": 4096, "thread_id": 14, "caller": "DeviceClient::Read"}
+  ],
+  "changes": [
+    {"scope": "FILES", "action": "modified", "path": "config.ini", "at_ms": 16, "detail": "mode: Auto → Device"}
+  ]
+}
+
