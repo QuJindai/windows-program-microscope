@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Program Microscope</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">⌬</span><span>Program Microscope</span></div>
+      <div class="target-pill"><span class="target-dot"></span><span id="target-name">MyApp.exe</span><span class="muted">·</span><span id="run-status">Failed</span></div>
+      <label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Search events, functions, threads, values…" aria-label="Search trace"></label>
+      <button id="new-session" class="ghost-button" type="button">＋ New session</button>
+    </header>
+
+    <div class="workbench">
+      <aside class="sidebar" aria-label="Lenses">
+        <div class="rail-label">PROGRAM</div>
+        <nav id="lens-nav">
+          <button class="nav-item active" data-lens="overview"><span class="nav-icon">▦</span>Overview</button>
+          <button class="nav-item" data-lens="timeline"><span class="nav-icon">◷</span>Timeline</button>
+          <button class="nav-item" data-lens="flow"><span class="nav-icon">⌘</span>Flow</button>
+          <button class="nav-item" data-lens="state"><span class="nav-icon">▣</span>State</button>
+          <button class="nav-item" data-lens="io"><span class="nav-icon">▤</span>I/O</button>
+          <button class="nav-item" data-lens="compare"><span class="nav-icon">⇄</span>Compare</button>
+        </nav>
+        <div class="sidebar-spacer"></div>
+        <button class="nav-item" data-lens="capture"><span class="nav-icon">◉</span>Capture</button>
+        <div class="rail-footer"><span class="truth-dot real"></span> evidence-first<br><span class="muted">MTP v0.1</span></div>
+      </aside>
+
+      <main id="view" class="main-view" tabindex="-1"></main>
+    </div>
+
+    <footer id="timeline-footer" class="timeline-footer" aria-label="Persistent execution timeline"></footer>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="app.js" defer></script>
+</body>
+</html>
