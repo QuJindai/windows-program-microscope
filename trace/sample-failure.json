@@ -1,0 +1,80 @@
+{
+  "schema_version": "0.1",
+  "run": {
+    "id": "failure",
+    "name": "Run B · Failed",
+    "status": "failed",
+    "started_at": "2026-09-06T10:28:03.000Z",
+    "duration_ms": 13210,
+    "capture_mode": "deep_trace",
+    "target": {"name": "MyApp.exe", "pid": 8420, "path": "C:\\Apps\\MyApp\\MyApp.exe", "arch": "x64", "os": "Windows 11"},
+    "summary": {"headline": "Timed out after CRC mismatch", "now": "Waiting for a device response", "cpu_percent": 14, "memory_mb": 682, "threads": 18, "modules": 37, "network_connections": 3, "exceptions": 1, "wait_percent": 63}
+  },
+  "nodes": [
+    {"id": "startup", "kind": "phase", "label": "Startup", "module": "MyApp.exe", "source": "main.cpp:52", "status": "executed"},
+    {"id": "load_config", "kind": "function", "label": "Load config", "module": "MyApp.exe", "source": "config.cpp:81", "status": "executed"},
+    {"id": "connect_device", "kind": "function", "label": "Connect device", "module": "Device.dll", "source": "device.cpp:90", "status": "executed"},
+    {"id": "read_device", "kind": "function", "label": "Read device", "module": "Device.dll", "source": "device.cpp:144", "status": "executed"},
+    {"id": "parse_response", "kind": "function", "label": "Parse response", "module": "MyApp.exe", "source": "state.cpp:278", "status": "executed"},
+    {"id": "check_crc", "kind": "function", "label": "CheckCRC", "module": "MyApp.exe", "source": "crc.cpp:217", "status": "executed"},
+    {"id": "retry", "kind": "function", "label": "Retry ×3", "module": "Device.dll", "source": "device.cpp:188", "status": "executed"},
+    {"id": "timeout", "kind": "fault", "label": "Timeout", "module": "Device.dll", "source": "device.cpp:221", "status": "executed"},
+    {"id": "process_data", "kind": "function", "label": "Process data", "module": "MyApp.exe", "source": "state.cpp:301", "status": "skipped"},
+    {"id": "complete", "kind": "phase", "label": "Complete", "module": "MyApp.exe", "source": "main.cpp:72", "status": "skipped"}
+  ],
+  "threads": [
+    {"id": 1, "name": "Main", "state": "Waiting", "cpu_ms": 288},
+    {"id": 11, "name": "Device I/O", "state": "Waiting", "cpu_ms": 106},
+    {"id": 14, "name": "Worker", "state": "Waiting", "cpu_ms": 412}
+  ],
+  "events": [
+    {"id": "f1", "kind": "user_action", "phase": "Startup", "start_ms": 0, "duration_ms": 17, "thread_id": 1, "node_id": "startup", "label": "Click Open", "status": "ok", "outcome": "open_requested", "details": {"control": "Open", "input": "D:\\projects\\demo"}, "evidence_ids": ["ev_user"]},
+    {"id": "f2", "kind": "function", "phase": "Load config", "start_ms": 17, "duration_ms": 400, "thread_id": 1, "node_id": "load_config", "label": "Load config", "status": "ok", "outcome": "config_loaded", "details": {"file": "config.ini", "bytes": 1204}, "evidence_ids": ["ev_process", "ev_file"]},
+    {"id": "f3", "kind": "network", "phase": "Connect device", "start_ms": 417, "duration_ms": 1676, "thread_id": 11, "node_id": "connect_device", "label": "Connect device", "status": "ok", "outcome": "connected", "details": {"endpoint": "10.42.17.8:5023"}, "evidence_ids": ["ev_network"]},
+    {"id": "f4", "kind": "network", "phase": "Read device", "start_ms": 2093, "duration_ms": 6003, "thread_id": 14, "node_id": "read_device", "label": "Read device", "status": "ok", "outcome": "4096_bytes", "details": {"bytes_received": 4096}, "evidence_ids": ["ev_network"]},
+    {"id": "f5", "kind": "function", "phase": "Parse response", "start_ms": 8096, "duration_ms": 152, "thread_id": 14, "node_id": "parse_response", "label": "Parse response", "status": "ok", "outcome": "19_records", "details": {"buffer": "response.json", "bytes": 49152}, "evidence_ids": ["ev_process"]},
+    {"id": "f6", "kind": "function", "phase": "CheckCRC", "start_ms": 8248, "duration_ms": 120, "thread_id": 14, "node_id": "check_crc", "label": "CheckCRC", "status": "fault", "outcome": "crc_mismatch", "details": {"expected": "0x3F2A", "actual": "0x9C4D"}, "evidence_ids": ["ev_process", "ev_crc"]},
+    {"id": "f7", "kind": "network", "phase": "Retry #1", "start_ms": 8368, "duration_ms": 163, "thread_id": 14, "node_id": "retry", "label": "Retry #1", "status": "fault", "outcome": "no_response", "details": {"attempt": 1, "endpoint": "10.42.17.8:5023"}, "evidence_ids": ["ev_network"]},
+    {"id": "f8", "kind": "network", "phase": "Retry #2", "start_ms": 8531, "duration_ms": 1211, "thread_id": 14, "node_id": "retry", "label": "Retry #2", "status": "fault", "outcome": "no_response", "details": {"attempt": 2, "endpoint": "10.42.17.8:5023"}, "evidence_ids": ["ev_network"]},
+    {"id": "f9", "kind": "network", "phase": "Retry #3", "start_ms": 9742, "duration_ms": 1264, "thread_id": 14, "node_id": "retry", "label": "Retry #3", "status": "fault", "outcome": "no_response", "details": {"attempt": 3, "endpoint": "10.42.17.8:5023"}, "evidence_ids": ["ev_network"]},
+    {"id": "f10", "kind": "exception", "phase": "Timeout", "start_ms": 11006, "duration_ms": 2204, "thread_id": 14, "node_id": "timeout", "label": "Timeout", "status": "fault", "outcome": "WSAETIMEDOUT", "details": {"code": "10060", "wait_reason": "network_recv", "endpoint": "10.42.17.8:5023"}, "evidence_ids": ["ev_network", "ev_exception"]}
+  ],
+  "values": [
+    {"id": "v_expected_crc", "name": "expectedCrc", "type": "uint16_t", "value": "0x3F2A", "event_id": "f6"},
+    {"id": "v_actual_crc", "name": "actualCrc", "type": "uint16_t", "value": "0x9C4D", "event_id": "f6"},
+    {"id": "v_result", "name": "result", "type": "bool", "value": "false", "event_id": "f6"},
+    {"id": "v_response", "name": "response.json", "type": "buffer", "value": "48 KB", "event_id": "f4"}
+  ],
+  "edges": [
+    {"id": "e_endpoint", "from": "io9", "to": "v_response", "type": "CAUSES", "label": "network response"},
+    {"id": "e_response_crc", "from": "v_response", "to": "v_actual_crc", "type": "CAUSES", "label": "bytes 0–1"},
+    {"id": "e_crc_result", "from": "v_actual_crc", "to": "v_result", "type": "CAUSES", "label": "CRC mismatch"},
+    {"id": "e_timeout", "from": "v_result", "to": "f10", "type": "CAUSES", "label": "retry path"}
+  ],
+  "evidence": [
+    {"id": "ev_user", "truth": "REAL", "source": "window.message", "detail": "WM_COMMAND for the Open control"},
+    {"id": "ev_process", "truth": "REAL", "source": "ETW process/thread provider", "detail": "Process, thread and stack timestamps"},
+    {"id": "ev_file", "truth": "REAL", "source": "ETW file provider", "detail": "config.ini read"},
+    {"id": "ev_network", "truth": "REAL", "source": "ETW TCP/IP provider", "detail": "Connection, retries and timeout"},
+    {"id": "ev_crc", "truth": "DEBUG_ONLY", "source": "selected-value instrumentation", "detail": "actualCrc was captured in Deep Trace mode"},
+    {"id": "ev_exception", "truth": "REAL", "source": "ETW exception provider", "detail": "WSAETIMEDOUT (10060)"},
+    {"id": "ev_wait_percent", "truth": "DERIVED", "source": "event aggregation", "detail": "network wait duration / run duration"},
+    {"id": "ev_registry_unavailable", "truth": "UNAVAILABLE", "source": "capture capabilities", "detail": "Registry provider was not enabled in this session"}
+  ],
+  "io": [
+    {"id": "io7", "type": "file", "operation": "read", "path": "config.ini", "start_ms": 22, "duration_ms": 12, "status": "ok", "thread_id": 1, "caller": "LoadSettings"},
+    {"id": "io8", "type": "network", "operation": "tcp_connect", "endpoint": "10.42.17.8:5023", "start_ms": 417, "duration_ms": 38, "status": "ok", "thread_id": 11, "caller": "DeviceClient::Connect"},
+    {"id": "io9", "type": "network", "operation": "tcp_read", "endpoint": "10.42.17.8:5023", "start_ms": 2093, "duration_ms": 6003, "status": "ok", "bytes_received": 4096, "thread_id": 14, "caller": "DeviceClient::Read"},
+    {"id": "io10", "type": "network", "operation": "tcp_read", "endpoint": "10.42.17.8:5023", "start_ms": 8368, "duration_ms": 163, "status": "timeout", "bytes_received": 0, "thread_id": 14, "caller": "DeviceClient::Read"},
+    {"id": "io11", "type": "network", "operation": "tcp_read", "endpoint": "10.42.17.8:5023", "start_ms": 8531, "duration_ms": 1211, "status": "timeout", "bytes_received": 0, "thread_id": 14, "caller": "DeviceClient::Read"},
+    {"id": "io12", "type": "network", "operation": "tcp_read", "endpoint": "10.42.17.8:5023", "start_ms": 9742, "duration_ms": 1264, "status": "timeout", "bytes_received": 0, "thread_id": 14, "caller": "DeviceClient::Read"}
+  ],
+  "changes": [
+    {"scope": "FILES", "action": "created", "path": "cache\\data.bin", "at_ms": 8361, "detail": "4096 bytes"},
+    {"scope": "FILES", "action": "modified", "path": "config.ini", "at_ms": 8365, "detail": "mode: Auto → Device"},
+    {"scope": "REGISTRY", "action": "modified", "path": "HKCU\\Software\\MyApp\\Settings\\Mode", "at_ms": 8360, "detail": "Auto → Device"},
+    {"scope": "PROCESSES", "action": "started", "path": "helper.exe", "at_ms": 8410, "detail": "PID 12480"},
+    {"scope": "NETWORK", "action": "attempted", "path": "10.42.17.8:5023", "at_ms": 8372, "detail": "TIMEOUT"}
+  ]
+}
+
