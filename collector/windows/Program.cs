@@ -251,7 +251,9 @@ internal sealed class CaptureState
         foreach (var kind in EtwKinds)
             evidence[$"ev_etw_{kind}"] = new($"ev_etw_{kind}", "REAL", $"Windows kernel ETW {kind}", "Timestamp and decoded event payload; no stack, causal edge, or unobserved operation duration is inferred.");
         evidence["ev_snapshot"] = new("ev_snapshot", "REAL", "Windows process API snapshot", "Process/module/thread presence at capture startup; snapshot timestamps do not identify original load/start time.");
-        evidence["ev_counters"] = new("ev_counters", "REAL", "System.Diagnostics.Process", "Sampled TotalProcessorTime, WorkingSet64 and PrivateMemorySize64. CPU percent is delta process CPU time / delta wall time / logical processor count.");
+        evidence["ev_counters"] = new("ev_counters", "REAL", "System.Diagnostics.Process", "Sampled TotalProcessorTime, WorkingSet64 and PrivateMemorySize64 with monotonic sample timestamps.");
+        evidence["ev_cpu_percent"] = new("ev_cpu_percent", "DERIVED", "Process CPU percentage calculation",
+            "100 * delta(process_cpu_ms) / (delta(timestamp_ms) * logical_processors), using successive ev_counters process CPU time samples.", ["ev_counters"]);
     }
 
     public static MtpCapability[] CapabilityList(bool ready) => EtwKinds.Select(x => new MtpCapability(x, ready,
@@ -339,10 +341,10 @@ internal sealed class CaptureState
             catch (Exception error) { Diagnostic("memory_samples_unavailable", "warning", error.Message); }
         }
     }
-    private void Counter(string counterId, string name, string unit, double time, double value)
+    internal void Counter(string counterId, string name, string unit, double time, double value)
     {
         if (!double.IsFinite(value) || value < 0) return;
-        if (!counters.TryGetValue(counterId, out var counter)) counters[counterId] = counter = new(counterId, name, unit, new(), ["ev_counters"]);
+        if (!counters.TryGetValue(counterId, out var counter)) counters[counterId] = counter = new(counterId, name, unit, new(), [counterId == "process_cpu_percent" ? "ev_cpu_percent" : "ev_counters"]);
         counter.Samples.Add(new(time, value));
     }
     public void Etw(TraceEvent data, string kind, string operation, string label, Dictionary<string, object?>? details = null)
@@ -492,6 +494,11 @@ internal sealed class CaptureState
                 new() { ["headline"] = failed ? "Capture failed; partial evidence retained" : "Windows capture completed", ["now"] = "Observed evidence", ["threads"] = threads.Count,
                     ["modules"] = nodes.Values.Where(x => x.Kind == "module").Select(x => x.Label).Distinct().Count(), ["events"] = events.Count }, stopReason!);
             var usedEvidence = events.SelectMany(x => x.EvidenceIds).Concat(counters.Values.SelectMany(x => x.EvidenceIds)).ToHashSet(StringComparer.Ordinal);
+            var pendingEvidence = new Queue<string>(usedEvidence);
+            while (pendingEvidence.TryDequeue(out var evidenceId))
+                if (evidence.TryGetValue(evidenceId, out var entry))
+                    foreach (var input in entry.EvidenceIds ?? [])
+                        if (usedEvidence.Add(input)) pendingEvidence.Enqueue(input);
             var document = new MtpDocument("0.1", run, nodes.Values.ToArray(), threads.Values.ToArray(), events.OrderBy(x => x.StartMs).ToArray(),
                 [], [], evidence.Values.Where(x => x.Truth == "UNAVAILABLE" || usedEvidence.Contains(x.Id)).ToArray(),
                 io.OrderBy(x => (double)x["start_ms"]!).ToArray(), [], counters.Values.ToArray(), capabilities.Values.ToArray(), resources.Values.ToArray(), diagnostics.ToArray(),
@@ -602,7 +609,8 @@ internal sealed record MtpEvent([property: JsonPropertyName("id")] string Id, [p
     [property: JsonPropertyName("status")] string Status, [property: JsonPropertyName("outcome")] string Outcome,
     [property: JsonPropertyName("details")] Dictionary<string, object?> Details, [property: JsonPropertyName("evidence_ids")] string[] EvidenceIds);
 internal sealed record MtpEvidence([property: JsonPropertyName("id")] string Id, [property: JsonPropertyName("truth")] string Truth,
-    [property: JsonPropertyName("source")] string Source, [property: JsonPropertyName("detail")] string Detail);
+    [property: JsonPropertyName("source")] string Source, [property: JsonPropertyName("detail")] string Detail,
+    [property: JsonPropertyName("evidence_ids"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string[]? EvidenceIds = null);
 internal sealed record MtpCapability([property: JsonPropertyName("id")] string Id, [property: JsonPropertyName("available")] bool Available,
     [property: JsonPropertyName("status")] string Status, [property: JsonPropertyName("source")] string Source, [property: JsonPropertyName("reason")] string Reason);
 internal sealed record MtpCounter([property: JsonPropertyName("id")] string Id, [property: JsonPropertyName("name")] string Name,

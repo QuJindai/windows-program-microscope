@@ -186,7 +186,14 @@ function Assert-TraceContract($Trace, [int] $ExpectedPid) {
     }
     foreach ($counter in $Trace.counters) {
         Assert-Array $counter 'samples' "counter $($counter.id)"
-        Assert-RealEvidence $counter $evidence "counter $($counter.id)"
+        if ($counter.id -eq 'process_cpu_percent') {
+            Assert-Array $counter 'evidence_ids' "counter $($counter.id)"
+            Assert-That ($counter.evidence_ids.Count -eq 1 -and $counter.evidence_ids[0] -eq 'ev_cpu_percent') 'CPU percentage must reference its separate derivation evidence.'
+            Assert-That ($evidence.ContainsKey('ev_cpu_percent') -and $evidence.ev_cpu_percent.truth -eq 'DERIVED') 'CPU percentage evidence must be DERIVED.'
+            Assert-RealEvidence $evidence.ev_cpu_percent $evidence 'CPU percentage derivation inputs'
+        } else {
+            Assert-RealEvidence $counter $evidence "counter $($counter.id)"
+        }
         $previous = -1.0
         foreach ($sample in $counter.samples) {
             Assert-That ($sample.value -is [ValueType] -and [double]::IsFinite([double]$sample.value)) "Counter '$($counter.id)' contains a nonnumeric or nonfinite sample."

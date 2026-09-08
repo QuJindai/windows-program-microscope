@@ -112,6 +112,21 @@ try
         Check(json.RootElement.GetProperty("run").GetProperty("stop_reason").GetString() == "requested", "Requested stop reason lost.");
     }
     Check(Directory.GetFiles(folder, "*.tmp").Length == 0, "Atomic write leaked temporary file.");
+    var sampled = new CaptureState(new("capture", 7, 20, path), new("test-only", 7, "", "unknown", "Windows"));
+    sampled.Counter("process_cpu_percent", "Process CPU", "%", 0, 12.5);
+    sampled.Counter("process_cpu_ms", "Process CPU time", "ms", 0, 100);
+    sampled.Write(path);
+    using (var json = JsonDocument.Parse(File.ReadAllText(path)))
+    {
+        var root = json.RootElement;
+        var references = root.GetProperty("evidence").EnumerateArray().ToDictionary(x => x.GetProperty("id").GetString()!);
+        var percentId = root.GetProperty("counters")[0].GetProperty("evidence_ids")[0].GetString()!;
+        Check(references[percentId].GetProperty("truth").GetString() == "DERIVED", "CPU percentage must be labeled as derived evidence.");
+        var inputId = references[percentId].GetProperty("evidence_ids")[0].GetString()!;
+        Check(inputId == "ev_counters" && references[inputId].GetProperty("truth").GetString() == "REAL", "CPU derivation must retain its measured input evidence.");
+        var measuredId = root.GetProperty("counters")[1].GetProperty("evidence_ids")[0].GetString()!;
+        Check(references[measuredId].GetProperty("truth").GetString() == "REAL", "Measured process CPU time must remain REAL.");
+    }
     var failure = new CaptureState(new("capture", 7, 20, path), new("test-only", 7, "", "unknown", "Windows"));
     failure.Fail("test_failure", "Synthetic failure used only in contract test.");
     failure.ProvidersUnavailable("Synthetic test failure.");
