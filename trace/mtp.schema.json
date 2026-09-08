@@ -1,75 +1,854 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/QuJindai/windows-program-microscope/mtp.schema.json",
-  "title": "Microscope Trace Protocol v0.1",
+  "title": "Microscope Trace Protocol v0.1 (runtime v0.2 compatible)",
+  "description": "All collections are arrays. Cross-record references and unique graph identifiers are checked by TraceCore/trace_engine and the desktop persistence validator. No causal relationship follows from temporal proximity alone.",
   "type": "object",
-  "required": ["schema_version", "run", "nodes", "threads", "events", "values", "edges", "evidence", "io"],
+  "required": [
+    "schema_version",
+    "run",
+    "nodes",
+    "threads",
+    "events",
+    "values",
+    "edges",
+    "evidence",
+    "io"
+  ],
   "properties": {
-    "schema_version": {"type": "string", "const": "0.1"},
+    "schema_version": {
+      "const": "0.1"
+    },
     "run": {
       "type": "object",
-      "required": ["id", "name", "status", "duration_ms", "target", "capture_mode", "summary"],
+      "required": [
+        "id",
+        "name",
+        "status",
+        "duration_ms",
+        "target",
+        "capture_mode",
+        "summary"
+      ],
       "properties": {
-        "id": {"type": "string"},
-        "name": {"type": "string"},
-        "status": {"enum": ["running", "completed", "failed", "cancelled"]},
-        "duration_ms": {"type": "number", "minimum": 0},
-        "started_at": {"type": "string"},
-        "capture_mode": {"enum": ["observe", "deep_trace", "time_travel"]},
-        "target": {"type": "object"},
-        "summary": {"type": "object"}
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "status": {
+          "enum": [
+            "running",
+            "completed",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 9007199254740.99
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "capture_mode": {
+          "enum": [
+            "observe",
+            "deep_trace",
+            "time_travel"
+          ]
+        },
+        "target": {
+          "type": "object",
+          "properties": {
+            "pid": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "name": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          }
+        },
+        "summary": {
+          "type": "object"
+        }
       }
     },
-    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
-    "threads": {"type": "array", "items": {"type": "object"}},
-    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}},
-    "values": {"type": "array", "items": {"type": "object"}},
-    "edges": {"type": "array", "items": {"type": "object"}},
-    "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
-    "io": {"type": "array", "items": {"type": "object"}},
-    "changes": {"type": "array", "items": {"type": "object"}}
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "threads": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/thread"
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      },
+      "maxItems": 100000
+    },
+    "values": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/value"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "io": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/io"
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
+    "counters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/counter"
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/change"
+      }
+    }
   },
   "$defs": {
     "node": {
       "type": "object",
-      "required": ["id", "kind", "label"],
+      "required": [
+        "id",
+        "kind",
+        "label"
+      ],
       "properties": {
-        "id": {"type": "string"},
-        "kind": {"type": "string"},
-        "label": {"type": "string"},
-        "module": {"type": "string"},
-        "source": {"type": "string"},
-        "status": {"enum": ["executed", "skipped", "unknown"]}
-      }
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "module": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "executed",
+            "skipped",
+            "unknown"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "thread": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "cpu_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Null or absent means duration was not observed. A numeric zero is a measured instantaneous event.",
+          "maximum": 9007199254740.99
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
     },
     "event": {
       "type": "object",
-      "required": ["id", "kind", "start_ms", "duration_ms", "label", "status"],
+      "required": [
+        "id",
+        "kind",
+        "start_ms",
+        "label",
+        "status"
+      ],
       "properties": {
-        "id": {"type": "string"},
-        "kind": {"type": "string"},
-        "phase": {"type": "string"},
-        "start_ms": {"type": "number", "minimum": 0},
-        "duration_ms": {"type": "number", "minimum": 0},
-        "thread_id": {"type": ["integer", "string"]},
-        "node_id": {"type": "string"},
-        "label": {"type": "string"},
-        "status": {"type": "string"},
-        "outcome": {"type": "string"},
-        "details": {"type": "object"},
-        "evidence_ids": {"type": "array", "items": {"type": "string"}}
-      }
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "start_ms": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 9007199254740.99
+        },
+        "duration_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Null or absent means duration was not observed. A numeric zero is a measured instantaneous event.",
+          "maximum": 9007199254740.99
+        },
+        "duration_observed": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "value": {
+      "type": "object",
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {}
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "from",
+        "to",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "from": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "label": {
+          "type": "string"
+        },
+        "truth": {
+          "enum": [
+            "REAL",
+            "DERIVED",
+            "UNAVAILABLE",
+            "DEBUG_ONLY"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
     },
     "evidence": {
       "type": "object",
-      "required": ["id", "truth", "source", "detail"],
+      "required": [
+        "id",
+        "truth",
+        "source",
+        "detail"
+      ],
       "properties": {
-        "id": {"type": "string"},
-        "truth": {"enum": ["REAL", "DERIVED", "UNAVAILABLE", "DEBUG_ONLY"]},
-        "source": {"type": "string"},
-        "detail": {"type": "string"}
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "truth": {
+          "enum": [
+            "REAL",
+            "DERIVED",
+            "UNAVAILABLE",
+            "DEBUG_ONLY"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "io": {
+      "type": "object",
+      "required": [
+        "id",
+        "operation",
+        "start_ms"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "start_ms": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 9007199254740.99
+        },
+        "duration_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Null or absent means duration was not observed. A numeric zero is a measured instantaneous event.",
+          "maximum": 9007199254740.99
+        },
+        "duration_observed": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "bytes": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "bytes_received": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "bytes_sent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "required": [
+            "kind"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "resource": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "counter": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "unit",
+        "samples"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "truth": {
+          "enum": [
+            "REAL",
+            "DERIVED",
+            "UNAVAILABLE",
+            "DEBUG_ONLY"
+          ]
+        },
+        "samples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "timestamp_ms",
+              "value"
+            ],
+            "properties": {
+              "timestamp_ms": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 9007199254740.99
+              },
+              "value": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "capability": {
+      "type": "object",
+      "required": [
+        "id",
+        "available"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "$ref": "#/$defs/references"
+        }
+      ]
+    },
+    "diagnostic": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "change": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "at_ms": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 9007199254740.99
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "references": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "node_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "event_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "resource_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resource_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "thread_id": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "thread_ids": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "edge_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "edge_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "evidence_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "io_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "io_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "value_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
       }
     }
   }
 }
-

@@ -9,3 +9,11 @@ obj/
 *.user
 *.suo
 
+node_modules/
+src-tauri/target/
+src-tauri/collector/*
+!src-tauri/collector/README.md
+.toolchains/
+test-results/
+tests/runtime/target/
+src-tauri/gen/

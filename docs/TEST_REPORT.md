@@ -1,34 +1,39 @@
-# Test report — v0.1 baseline
+# V0.2 测试记录
 
-Date: 2026-09-06  
-Environment: Linux sandbox (Python 3.12, Node.js 24); Windows collector build is intended for Windows 11.
+本报告将本地云端编译、浏览器模拟桥接和真实 Windows ETW 验收分开。测试计数会随审查回归项增加，以 CI 和交付证据目录的最终日志为准。
 
-## Reference evidence checked
+## 2026-09-08 已执行
 
-- The Drive file `Dream_Windows_E盘全量部署_详细开发方案_20260906.md` was used only as a reference for the user's Windows machine, low-overhead/Deep Trace choices, evidence truth labels and E-drive deployment expectations.
-- The Drive trace `P7_STAGE6_TRACE_FAILURE_20260823_103519.txt` was used only as a reference for trace manifests, SHA-256 integrity, fail-closed provider errors and real-vs-derived data boundaries.
-- The public source tree `QuJindai/mllm-windows-ai-workbench` was inspected at commit `df7d8da4c398e05dc54475c656a5638158b1478c`. Its model-specific WPF/H6 UI remains a reference; this repository has no source dependency on it.
+| 验证 | 结果 | 能说明什么 |
+| --- | --- | --- |
+| Python 分析、导出、打包契约 | 31 项通过 | 记录语义、异常输入、分叉追溯、对比、打包过滤 |
+| Node 分析行为 | 13 项通过 | 浏览器分析引擎行为；与 Python 样例及构造输入投影一致 |
+| 浏览器七页集成 | 10 项通过，14 张尺寸/页面截图 | 1440×900/1600×1000 布局、选择、导入/导出、显式示例、模拟桥接 |
+| GUI 证据与竞态回归 | 7 项通过 | 样例来源持久化、未知值不冒充观测、迟到轮询不覆盖新状态 |
+| .NET Windows 采集器编译 | 通过，0 警告、0 错误 | 编译通过；不是 Windows ETW 已运行 |
+| Rust/Tauri Linux 编译与启动 | 通过，已保存原生窗口截图 | 真实桌面接口工作，Linux 正确显示采集不可用 |
+| MTP JSON Schema Draft 2020-12 | 通过 | Schema 自身有效，两份样例通过验证 |
+| Rust 运行时行为 | 已通过，本轮审查仍增加回归项 | 生命周期、持久化、严格校验、失败证据保留、PE 元数据 |
 
-## Executed checks
+## Windows 云端门禁
 
-| Check | Result |
-| --- | --- |
-| `python -m unittest discover -s tests -v` | 8 tests passed |
-| `node --check app/app.js` | passed |
-| `python -m json.tool` for schema and both fixtures | passed |
-| `python -m adapters.perfetto_export` + JSON parse | passed; slices and derived counter preserved |
-| In-process HTTP smoke test for `/`, `/api/runs`, `/api/trace/failure`, `/api/summary/failure` | all HTTP 200 |
-| Derived network-wait calculation on failure fixture | 65.7% (raw event aggregation) |
-| `python tools/package.py` extraction verification | passed; 35 files; SHA-256 recorded in `dist/manifest.json` |
+`.github/workflows/ci.yml` 的 Windows job 将实际运行以下步骤，执行结果在完成后更新本报告：
 
-## Windows handoff checks
+1. 发布自包含采集器和可控制的 Windows 探针。
+2. 运行采集器内存/字节上限、状态与保存行为契约。
+3. 在采集器 READY 后触发真实临时文件、专用 HKCU 键、本机 TCP 和线程活动。
+4. 检验事件来源与 PID、正常停止、部分证据，以及异常结束后的定向会话清理。
+5. 运行 Rust → 真实采集器 → 保存/加载的集成测试。
+6. 构建 Windows GUI 和 NSIS 安装包。
 
-On the target Windows machine, run the same Python/Node checks, then:
+在获取 Windows job 的成功日志前，不能把本地编译或模拟接口测试称为完整 Windows 验收。
 
-```powershell
-dotnet restore collector\windows
-dotnet build collector\windows -c Release
-dotnet run --project collector\windows -- --pid <PID> --duration 20 --out trace\captured.json
-```
+## 审查发现及修复方向
 
-The collector is not claimed as hardware-tested in this sandbox because ETW and an actual Windows PID are unavailable here. A provider or permission failure is expected to appear as `UNAVAILABLE` evidence in the output rather than a fabricated event.
+PID 0 使进程列表整体失败；采集器失败丢弃有效部分记录；事件量超出64MiB读取上限；停止超时残留ETW会话；迟到轮询覆盖新会话；示例导出重开丢失示例来源；对比忽略同阶段不同I/O目标；GUI把未知时长/派生证据显示为实际观测。
+
+这些是本轮核心升级的回归测试对象，修复及最终执行日志随代码提交。
+
+## 能力边界
+
+本版实现 Observe、记录分析与已有证据导航。完整指令级时间旅行、任意原生局部变量、完整内存快照和所有第三方软件兼容性没有完成；界面明确显示不可用。两次运行不能对齐的线程会显示“不可比较”或范围不足，不报告虚假的首次根因。
