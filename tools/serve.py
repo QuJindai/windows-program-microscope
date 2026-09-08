@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Serve the prototype UI and MTP fixtures with only the stdlib."""
+"""Serve the review UI and explicitly requested example traces. No live capture API."""
 
 from __future__ import annotations
 
@@ -25,21 +25,16 @@ class MicroscopeHandler(SimpleHTTPRequestHandler):
     """Static file handler plus three tiny JSON endpoints."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(ROOT), **kwargs)
+        super().__init__(*args, directory=str(ROOT / "app"), **kwargs)
 
     def end_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
 
     def do_GET(self) -> None:  # noqa: N802 (stdlib API)
         parsed = urlparse(self.path)
         if parsed.path == "/":
-            self.path = "/app/index.html"
-        elif parsed.path in {"/styles.css", "/app.js"}:
-            # The same index is served from / for this prototype and from the
-            # app/ directory when bundled by Tauri.
-            self.path = "/app" + parsed.path
+            self.path = "/index.html"
         elif parsed.path == "/api/runs":
             self._json([
                 read_trace("normal")["run"],
@@ -78,7 +73,7 @@ class MicroscopeHandler(SimpleHTTPRequestHandler):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Serve Program Microscope v0.1")
+    parser = argparse.ArgumentParser(description="Serve Program Microscope v0.2 review UI")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()

@@ -1,6 +1,6 @@
 [package]
 name = "program-microscope"
-version = "0.1.0"
+version = "0.2.0"
 description = "A GUI-first microscope for Windows program execution"
 authors = ["QuJindai"]
 edition = "2021"

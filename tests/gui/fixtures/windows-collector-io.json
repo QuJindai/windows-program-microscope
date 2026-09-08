@@ -1,0 +1,368 @@
+{
+  "schema_version": "0.1",
+  "run": {
+    "id": "windows-collector-io-regression",
+    "name": "实际 Windows I/O 记录摘录（回归输入）",
+    "status": "completed",
+    "duration_ms": 8104.4768,
+    "started_at": "2026-09-08T01:26:40.4539222+00:00",
+    "capture_mode": "observe",
+    "target": {
+      "name": "ProgramMicroscope.Probe",
+      "pid": 372,
+      "path": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\probe\\ProgramMicroscope.Probe.exe",
+      "arch": "x64",
+      "os": "Windows"
+    },
+    "summary": {
+      "headline": "Windows capture completed",
+      "now": "Observed evidence",
+      "threads": 15,
+      "modules": 73,
+      "events": 456
+    },
+    "stop_reason": "duration",
+    "source_capture_sha256": "894f37c4f0e140404b2aa54151b3335d2d12a926c4c6a815e3da760e20f909bb"
+  },
+  "nodes": [
+    {
+      "id": "node_123",
+      "kind": "file",
+      "label": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data",
+      "module": "ProgramMicroscope.Probe",
+      "source": "unresolved",
+      "status": "executed"
+    },
+    {
+      "id": "node_126",
+      "kind": "file",
+      "label": "file write (name unavailable)",
+      "module": "ProgramMicroscope.Probe",
+      "source": "unresolved",
+      "status": "executed"
+    },
+    {
+      "id": "node_128",
+      "kind": "file",
+      "label": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data\\microscope-probe-6438ff1cc07b48d185701ee3a3a9434c.bin",
+      "module": "ProgramMicroscope.Probe",
+      "source": "unresolved",
+      "status": "executed"
+    },
+    {
+      "id": "node_209",
+      "kind": "network",
+      "label": "[127.0.0.1]:63221 → [127.0.0.1]:63222",
+      "module": "ProgramMicroscope.Probe",
+      "source": "unresolved",
+      "status": "executed"
+    }
+  ],
+  "threads": [
+    {
+      "id": 532,
+      "name": "Thread 532",
+      "state": "Observed"
+    }
+  ],
+  "events": [
+    {
+      "id": "event_123",
+      "kind": "file",
+      "phase": "create",
+      "start_ms": 147.2481,
+      "duration_ms": null,
+      "thread_id": 532,
+      "node_id": "node_123",
+      "label": "create: D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data",
+      "status": "observed",
+      "outcome": "observed",
+      "details": {
+        "file_object": "0xffffbe8f3bab67e0",
+        "create_disposition": "CREATE_NEW",
+        "file_path": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data",
+        "provider": "Windows Kernel",
+        "event_name": "FileIO/Create",
+        "event_version": 3,
+        "pid": 372,
+        "timestamp_qpc": 15254091338
+      },
+      "evidence_ids": [
+        "ev_etw_file"
+      ]
+    },
+    {
+      "id": "event_126",
+      "kind": "file",
+      "phase": "write",
+      "start_ms": 149.8037,
+      "duration_ms": null,
+      "thread_id": 532,
+      "node_id": "node_126",
+      "label": "write: file write (name unavailable)",
+      "status": "observed",
+      "outcome": "observed",
+      "details": {
+        "offset": 10207232,
+        "irp": "0xffffbe8f36952ce8",
+        "file_path": "",
+        "bytes": 102400,
+        "byte_semantics": "requested_io_size",
+        "provider": "Windows Kernel",
+        "event_name": "FileIO/Write",
+        "event_version": 3,
+        "pid": 372,
+        "timestamp_qpc": 15254116894
+      },
+      "evidence_ids": [
+        "ev_etw_file"
+      ]
+    },
+    {
+      "id": "event_128",
+      "kind": "file",
+      "phase": "write",
+      "start_ms": 150.5319,
+      "duration_ms": null,
+      "thread_id": 532,
+      "node_id": "node_128",
+      "label": "write: D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data\\microscope-probe-6438ff1cc07b48d185701ee3a3a9434c.bin",
+      "status": "observed",
+      "outcome": "observed",
+      "details": {
+        "offset": 0,
+        "irp": "0xffffbe8f339eeca8",
+        "file_path": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data\\microscope-probe-6438ff1cc07b48d185701ee3a3a9434c.bin",
+        "bytes": 65536,
+        "byte_semantics": "requested_io_size",
+        "provider": "Windows Kernel",
+        "event_name": "FileIO/Write",
+        "event_version": 3,
+        "pid": 372,
+        "timestamp_qpc": 15254124176
+      },
+      "evidence_ids": [
+        "ev_etw_file"
+      ]
+    },
+    {
+      "id": "event_442",
+      "kind": "network",
+      "phase": "receive",
+      "start_ms": 164.1163,
+      "duration_ms": null,
+      "node_id": "node_209",
+      "label": "receive: [127.0.0.1]:63221 → [127.0.0.1]:63222",
+      "status": "observed",
+      "outcome": "observed",
+      "details": {
+        "protocol": "tcp",
+        "source_address": "127.0.0.1",
+        "source_port": 63221,
+        "destination_address": "127.0.0.1",
+        "destination_port": 63222,
+        "bytes": 8192,
+        "provider": "Windows Kernel",
+        "event_name": "TcpIp/Recv",
+        "event_version": 2,
+        "pid": 372,
+        "timestamp_qpc": 15254260020
+      },
+      "evidence_ids": [
+        "ev_etw_network"
+      ]
+    }
+  ],
+  "values": [],
+  "edges": [],
+  "evidence": [
+    {
+      "id": "ev_etw_file",
+      "truth": "REAL",
+      "source": "Windows kernel ETW file",
+      "detail": "Timestamp and decoded event payload; no stack, causal edge, or unobserved operation duration is inferred."
+    },
+    {
+      "id": "ev_etw_network",
+      "truth": "REAL",
+      "source": "Windows kernel ETW network",
+      "detail": "Timestamp and decoded event payload; no stack, causal edge, or unobserved operation duration is inferred."
+    }
+  ],
+  "io": [
+    {
+      "id": "io_6",
+      "event_id": "event_128",
+      "kind": "file",
+      "type": "file",
+      "operation": "write",
+      "target": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data\\microscope-probe-6438ff1cc07b48d185701ee3a3a9434c.bin",
+      "start_ms": 150.5319,
+      "duration_ms": null,
+      "status": "observed",
+      "evidence_ids": [
+        "ev_etw_file"
+      ],
+      "path": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data\\microscope-probe-6438ff1cc07b48d185701ee3a3a9434c.bin",
+      "bytes": 65536,
+      "resource_id": "resource_2"
+    },
+    {
+      "id": "io_308",
+      "event_id": "event_442",
+      "kind": "network",
+      "type": "network",
+      "operation": "receive",
+      "target": "[127.0.0.1]:63221 → [127.0.0.1]:63222",
+      "start_ms": 164.1163,
+      "duration_ms": null,
+      "status": "observed",
+      "evidence_ids": [
+        "ev_etw_network"
+      ],
+      "endpoint": "[127.0.0.1]:63221 → [127.0.0.1]:63222",
+      "bytes": 8192,
+      "resource_id": "resource_54"
+    },
+    {
+      "id": "io_1",
+      "event_id": "event_123",
+      "kind": "file",
+      "type": "file",
+      "operation": "create",
+      "target": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data",
+      "start_ms": 147.2481,
+      "duration_ms": null,
+      "status": "observed",
+      "evidence_ids": [
+        "ev_etw_file"
+      ],
+      "path": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data",
+      "resource_id": "resource_1"
+    },
+    {
+      "id": "io_4",
+      "event_id": "event_126",
+      "kind": "file",
+      "type": "file",
+      "operation": "write",
+      "target": "file write (name unavailable)",
+      "start_ms": 149.8037,
+      "duration_ms": null,
+      "status": "observed",
+      "evidence_ids": [
+        "ev_etw_file"
+      ],
+      "path": "",
+      "bytes": 102400
+    }
+  ],
+  "changes": [],
+  "counters": [],
+  "capabilities": [
+    {
+      "id": "process",
+      "available": true,
+      "status": "observed",
+      "source": "Windows kernel ETW",
+      "reason": "Matching target ETW events were received."
+    },
+    {
+      "id": "thread",
+      "available": true,
+      "status": "observed",
+      "source": "Windows kernel ETW",
+      "reason": "Matching target ETW events were received."
+    },
+    {
+      "id": "module",
+      "available": true,
+      "status": "observed",
+      "source": "Windows kernel ETW",
+      "reason": "Matching target ETW events were received."
+    },
+    {
+      "id": "file",
+      "available": true,
+      "status": "observed",
+      "source": "Windows kernel ETW",
+      "reason": "Matching target ETW events were received."
+    },
+    {
+      "id": "registry",
+      "available": true,
+      "status": "observed",
+      "source": "Windows kernel ETW",
+      "reason": "Matching target ETW events were received."
+    },
+    {
+      "id": "network",
+      "available": true,
+      "status": "observed",
+      "source": "Windows kernel ETW",
+      "reason": "Matching target ETW events were received."
+    },
+    {
+      "id": "cpu",
+      "available": true,
+      "status": "observed",
+      "source": "Windows process API",
+      "reason": "Process API samples available; CPU percent uses successive samples and logical processor count."
+    },
+    {
+      "id": "memory",
+      "available": true,
+      "status": "observed",
+      "source": "Windows process API",
+      "reason": "Process API memory samples available."
+    },
+    {
+      "id": "stacks",
+      "available": false,
+      "status": "unavailable",
+      "source": "none",
+      "reason": "Stack collection and symbol resolution are not implemented."
+    },
+    {
+      "id": "locals",
+      "available": false,
+      "status": "unavailable",
+      "source": "none",
+      "reason": "ETW does not expose arbitrary native local variables."
+    },
+    {
+      "id": "time_travel",
+      "available": false,
+      "status": "unavailable",
+      "source": "none",
+      "reason": "Instruction replay is not provided by this collector."
+    }
+  ],
+  "resources": [
+    {
+      "id": "resource_1",
+      "kind": "file",
+      "name": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data",
+      "event_ids": [
+        "event_123"
+      ]
+    },
+    {
+      "id": "resource_2",
+      "kind": "file",
+      "name": "D:\\a\\windows-program-microscope\\windows-program-microscope\\test-results\\windows\\probe-data\\microscope-probe-6438ff1cc07b48d185701ee3a3a9434c.bin",
+      "event_ids": [
+        "event_128"
+      ]
+    },
+    {
+      "id": "resource_54",
+      "kind": "network",
+      "name": "[127.0.0.1]:63221 → [127.0.0.1]:63222",
+      "event_ids": [
+        "event_442"
+      ]
+    }
+  ],
+  "diagnostics": []
+}

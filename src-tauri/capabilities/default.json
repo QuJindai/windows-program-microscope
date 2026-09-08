@@ -1,8 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal desktop capability for the Program Microscope shell",
-  "windows": ["main"],
-  "permissions": ["core:default"]
+  "description": "Desktop window access; collector launch and trace persistence are restricted to registered native commands",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
 }
-

@@ -1,27 +1,30 @@
-# GUI specification — v0.1
+# GUI 规格 — V0.2
 
-## Shell
+## 固定工作台
 
-The shell has one stable coordinate system:
+窗口默认 1440×900，最小 1180×720；同时验证 1600×1000。顶部提供搜索、记录打开与新会话；左侧 210px 导航；中部为当前镜片；右侧检查器显示选择及证据；底部执行时间线始终可见。使用简体中文、深色背景、细分隔线，琥珀色表示选择，青色表示证据，红色表示异常。
 
-- top bar: target process, run status, global search;
-- left rail: Overview, Timeline, Flow, State, I/O, Compare;
-- centre: the selected lens;
-- right inspector: selected event, explanation and evidence links;
-- bottom: an execution timeline that never disappears.
+| 页面 | 用户问题 | 本版内容 |
+| --- | --- | --- |
+| 总览 | 程序发生了什么？ | 记录摘要、已采计数器、重要事件、选择详情与证据 |
+| 时间线 | 何时发生？ | 线程/类别轨道、时间范围、共享选择；去除同一 I/O 的重复投影 |
+| 流程 | 走了什么路径？ | 时间顺序及显式证据图、可达性和最短路径；两类关系分别说明 |
+| 状态 | 当时有哪些可见状态？ | 已采 CPU/内存曲线、记录提供的选定值及分叉来源；缺失能力明确显示 |
+| 输入/输出 | 与系统交换了什么？ | 文件、注册表、网络记录、目标、操作、字节、端点与原始证据 |
+| 对比 | 两次何处不同？ | 线程内语义对齐、首次可比较差异、无法匹配的线程范围 |
+| 开始采集 | 如何观察这个进程？ | 真实进程选择、时长、提供程序能力、开始/停止、记录列表及 PE 检查 |
 
-The screen is dark and information-dense, but a person can read the first answer without knowing ETW, stacks or profilers. Amber means selection, cyan means a navigable evidence link, red means a fault, and grey means unavailable rather than zero.
+## 联动与数据规则
 
-## Interaction contract
+- 选择事件在各镜片间保留；底部时间定位和检查器始终指向同一记录。
+- 导入错误保留上一次有效记录；示例必须主动打开，导出再导入仍保留示例标记。
+- 采集在桌面接口执行；浏览器可打开记录并分析，不能伪装本机采集可用。
+- REAL 观测与 DERIVED 计算结果按协议显示。CPU 百分比是基于采样的派生指标，可追溯其计算输入。
+- 文件请求字节不自动解释成实际完成字节；没有开始/结束配对的事件不虚构耗时。
+- 顺序相邻不等于调用关系或根因。状态追溯仅沿记录提供的显式边。
+- Deep Trace、完整内存、任意局部变量、指令级时间旅行和自动子进程采集当前禁用。
+- 用户可查看会话运行状态，停止或完成后打开最终记录；当前不是逐事件实时流送。
 
-- Clicking an event in any lens selects the same event everywhere.
-- Clicking **Trace value origin** opens State and follows reverse `CAUSES` edges.
-- Clicking **Open divergence** opens Compare at the first event whose outcome differs.
-- Clicking a timeline lane filters the centre lens without changing the capture.
-- Search is global across functions, threads, values, files and endpoints.
-- Capture mode is chosen before a session starts: Observe, Deep Trace or Time Travel.
+## 视觉验收
 
-## Human language rules
-
-The UI leads with a sentence such as “The program is waiting for a device response.” It then offers the exact event, timestamp, thread, caller and evidence. Derived summaries (for example, “wait accounts for 63%”) are visually marked as derived. Missing capabilities are shown as “Unavailable — requires …”, never as empty data or a guessed value.
-
+原始参考与提示词见 `gui-prototypes/`。当前实际截图见交付包 `evidence/gui/`；实际 Windows 记录截图另行标识。布局沿原型收敛，但指标、内存内容、调用关系须服从真实数据。原始状态图源文件损坏情况见该目录 README，不能用不完整图代替当前运行截图。

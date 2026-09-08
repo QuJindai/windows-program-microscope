@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
+import os
 import subprocess
 import sys
 import tempfile
@@ -25,8 +25,18 @@ def sha256(path: Path) -> str:
 
 
 def package_files() -> list[Path]:
-    ignored = {".git", "dist", "__pycache__"}
-    return sorted(path for path in ROOT.rglob("*") if path.is_file() and not any(part in ignored for part in path.parts))
+    ignored = {".git", "dist", "__pycache__", "node_modules", "target", "bin", "obj",
+               ".venv", ".toolchains", "test-results", ".idea", ".vs", ".pytest_cache"}
+    files = []
+    for directory, folders, names in os.walk(ROOT, followlinks=False):
+        folders[:] = [name for name in folders if name not in ignored and
+                      not (Path(directory) / name).is_symlink()]
+        for name in names:
+            path = Path(directory) / name
+            if path.is_symlink() or name == ".env" or name.startswith(".env."):
+                continue
+            files.append(path)
+    return sorted(files)
 
 
 def main() -> int:
@@ -34,7 +44,7 @@ def main() -> int:
     if tests.returncode:
         return tests.returncode
     DIST.mkdir(exist_ok=True)
-    archive = DIST / "program-microscope-v0.1.0-source.zip"
+    archive = DIST / "program-microscope-v0.2.0-source.zip"
     if archive.exists():
         archive.unlink()
     files = package_files()
@@ -50,6 +60,11 @@ def main() -> int:
         expected = sorted(Path("windows-program-microscope") / path.relative_to(ROOT) for path in files)
         if recovered != expected:
             raise RuntimeError("archive verification failed: extracted file list differs")
+
+        for path in files:
+            copy = extracted / "windows-program-microscope" / path.relative_to(ROOT)
+            if sha256(copy) != sha256(path):
+                raise RuntimeError(f"archive content verification failed: {path.relative_to(ROOT)}")
 
     manifest = {"package": archive.name, "sha256": sha256(archive), "files": len(files), "schema_version": "0.1"}
     (DIST / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

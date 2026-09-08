@@ -1,27 +1,111 @@
-name: contract-tests
+name: runtime-and-gui-validation
 
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: microscope-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
-  prototype-contract:
+  analysis-and-gui:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - name: Python contract tests
-        run: python -m unittest discover -s tests -v
-      - name: JavaScript syntax check
-        run: node --check app/app.js
-      - name: JSON fixtures
-        run: |
-          python -m json.tool trace/mtp.schema.json >/dev/null
-          python -m json.tool trace/sample-normal.json >/dev/null
-          python -m json.tool trace/sample-failure.json >/dev/null
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: python -m unittest discover -s tests -v
+      - run: npm run test:core
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:gui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gui-evidence
+          path: test-results/gui/
+          if-no-files-found: warn
+      - name: Verify portable source package
+        run: python tools/package.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-package
+          path: dist/
 
+  windows-runtime:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          workspaces: |
+            src-tauri -> target
+            tests/runtime -> target
+      - run: npm ci
+      - name: Publish real Windows collector
+        id: collector
+        run: dotnet publish collector/windows -c Release -r win-x64 --self-contained true -o src-tauri/collector
+      - name: Build IO registry TCP thread probe
+        id: probe
+        run: dotnet publish collector/probe -c Release -r win-x64 --self-contained true -o test-results/probe
+      - name: Collector behavioral contracts
+        run: dotnet run --project tests/windows/CollectorContracts/ProgramMicroscope.Collector.Contracts.csproj -c Release
+      - name: Real Windows ETW acceptance
+        run: ./tests/windows/test_capture.ps1 -CollectorPath "$PWD/src-tauri/collector/ProgramMicroscope.Collector.exe" -ProbePath "$PWD/test-results/probe/ProgramMicroscope.Probe.exe" -OutputDirectory "$PWD/test-results/windows"
+      - name: Test third-party jq identical to selected Drive binary
+        if: ${{ !cancelled() && steps.collector.outcome == 'success' }}
+        run: |
+          New-Item -ItemType Directory -Force test-results/third-party | Out-Null
+          Invoke-WebRequest 'https://github.com/jqlang/jq/releases/download/jq-1.8.2/jq-windows-amd64.exe' -OutFile test-results/third-party/jq-windows-amd64.exe
+          $hash = (Get-FileHash test-results/third-party/jq-windows-amd64.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne 'a6fc67fedaf9128a3309a1e2ebb8b986aeccf70122ee46d2cb4849e423f0c627') { throw 'jq checksum mismatch' }
+          ./tests/windows/test_jq.ps1 -CollectorPath "$PWD/src-tauri/collector/ProgramMicroscope.Collector.exe" -JqPath "$PWD/test-results/third-party/jq-windows-amd64.exe" -OutputDirectory "$PWD/test-results/windows/jq"
+      - name: Runtime persistence and session tests
+        if: ${{ !cancelled() && steps.collector.outcome == 'success' && steps.probe.outcome == 'success' }}
+        env:
+          MICROSCOPE_TEST_COLLECTOR: ${{ github.workspace }}/src-tauri/collector/ProgramMicroscope.Collector.exe
+          MICROSCOPE_TEST_PROBE: ${{ github.workspace }}/test-results/probe/ProgramMicroscope.Probe.exe
+        run: cargo test --manifest-path tests/runtime/Cargo.toml
+      - name: Build native Windows GUI and installer
+        id: desktop
+        if: ${{ !cancelled() && steps.collector.outcome == 'success' }}
+        run: npm run tauri build -- --bundles nsis
+      - name: Install and launch actual Windows desktop
+        if: ${{ !cancelled() && steps.desktop.outcome == 'success' }}
+        run: |
+          $installer = (Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1).FullName
+          ./tests/windows/test_desktop.ps1 -InstallerPath $installer -OutputDirectory "$PWD/test-results/windows/desktop"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-runtime-evidence
+          path: test-results/windows/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.desktop.outcome == 'success' }}
+        with:
+          name: windows-desktop
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/program-microscope.exe

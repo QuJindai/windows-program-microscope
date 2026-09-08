@@ -1,34 +1,46 @@
-# Test report — v0.1 baseline
+# V0.2 测试记录
 
-Date: 2026-09-06  
-Environment: Linux sandbox (Python 3.12, Node.js 24); Windows collector build is intended for Windows 11.
+测试日期：2026-09-08。实际 Windows 云端环境为 GitHub Actions `windows-2022`（Windows Server 2022 / 10.0.20348），不是 Linux 模拟 ETW。完整通过的基线提交为 `f162fccb65952f2a78a65f4e5288210374fa4dc6`，见[执行日志](https://github.com/QuJindai/windows-program-microscope/actions/runs/34177029147)。
 
-## Reference evidence checked
+本版随后修正了真实 I/O 顶层字段在检查器中漏显示的问题，并增加摘自真实采集记录的回归。最终交付包的 `build-info.json` 记录其精确代码提交及重跑链接；以该链接对应的最终报告为准。
 
-- The Drive file `Dream_Windows_E盘全量部署_详细开发方案_20260906.md` was used only as a reference for the user's Windows machine, low-overhead/Deep Trace choices, evidence truth labels and E-drive deployment expectations.
-- The Drive trace `P7_STAGE6_TRACE_FAILURE_20260823_103519.txt` was used only as a reference for trace manifests, SHA-256 integrity, fail-closed provider errors and real-vs-derived data boundaries.
-- The public source tree `QuJindai/mllm-windows-ai-workbench` was inspected at commit `df7d8da4c398e05dc54475c656a5638158b1478c`. Its model-specific WPF/H6 UI remains a reference; this repository has no source dependency on it.
+## 已执行的验证
 
-## Executed checks
+| 验证 | 结果 | 范围 |
+| --- | --- | --- |
+| Python 分析/导出/打包 | 31 项通过 | 分叉来源、首次差异、异常输入、Perfetto 和源码包 |
+| Node 分析 | 13 项通过 | 浏览器分析语义；另核对 Python/JS 输出一致 |
+| 浏览器七页集成 | 10 项通过、14 张截图 | 1440×900 / 1600×1000；选择、导入/导出与模拟桥接 |
+| GUI 证据与竞态回归 | 9 项通过 | 示例来源持久化、未知/派生值、迟到轮询、I/O 去重及实际顶层字段 |
+| Rust Linux 运行时 | 21 项通过 | 生命周期、严格校验、持久化、失败证据保留、PE 元数据 |
+| Rust Windows 运行时 | 17 项通过 | 含真实 Rust→采集器→保存/加载，以及强制终止后的 ETW 会话清理 |
+| .NET 采集器契约 | 66 条断言通过 | 记录预算、输出边界、状态、KCB 路径与 CPU 百分比来源 |
+| 真实 Windows 探针 | 通过 | 进程/线程/模块/文件/注册表/TCP、路径/字节/键值/端点与停止 |
+| 真实第三方 jq 1.8.2 | 通过 | 与 Drive 目标字节一致，1024 条标准输入 + 1 条文件记录得到 1025 条正确输出 |
+| NSIS 安装与原生启动 | 通过 | 实际安装、随包采集器查询、中文窗口启动/存活、卸载清理 |
+| 原生窗口截图 | 已取得 | Windows 实际前台窗口；云端屏幕约1024×768，布局验收使用上述两个完整尺寸 |
+| 实际 Windows 记录→GUI | 60 项检查通过 | 探针和 jq 两条记录，五个镜片×两种尺寸，计数器/I/O/来源及无溢出 |
+| Linux 原生 Tauri | 编译与启动通过 | 容器内真实桌面；正确显示 Windows 采集不可用 |
+| MTP Schema | 通过 | Draft 2020-12 Schema、样例和实际 Windows 记录校验 |
 
-| Check | Result |
-| --- | --- |
-| `python -m unittest discover -s tests -v` | 8 tests passed |
-| `node --check app/app.js` | passed |
-| `python -m json.tool` for schema and both fixtures | passed |
-| `python -m adapters.perfetto_export` + JSON parse | passed; slices and derived counter preserved |
-| In-process HTTP smoke test for `/`, `/api/runs`, `/api/trace/failure`, `/api/summary/failure` | all HTTP 200 |
-| Derived network-wait calculation on failure fixture | 65.7% (raw event aggregation) |
-| `python tools/package.py` extraction verification | passed; 35 files; SHA-256 recorded in `dist/manifest.json` |
+不同操作系统启用的条件测试不同，因此 Rust 21/17 不是同一组重复运行的计数。浏览器模拟桥接仅验证交互；真实系统采集由独立 Windows 门禁证明。NSIS 已安装启动不等于 Windows 10/11 所有版本均已测试。
 
-## Windows handoff checks
+## 实际记录与修复
 
-On the target Windows machine, run the same Python/Node checks, then:
+首轮 Windows 采集得到455条事件，MTP和两种分析引擎均可读取，但完整注册表键和值的断言失败。原因为子键地址不能简单继承父键 Open/Create 名称；现在按 KCB 生命周期及原始事件映射完整路径，第二轮和后续验收通过。`f162fcc` 基线探针458条事件、jq69条事件；事件数量受运行时调度影响，不作为固定输出断言。
 
-```powershell
-dotnet restore collector\windows
-dotnet build collector\windows -c Release
-dotnet run --project collector\windows -- --pid <PID> --duration 20 --out trace\captured.json
-```
+真实记录导入还暴露了 I/O 检查器只读 `details`、遗漏采集器顶层字节数/路径/端点的缺陷。已将真实字段接入显示，并用真实记录摘录验证零值、未知值及关联证据。文件字节数明确解释为请求大小。
 
-The collector is not claimed as hardware-tested in this sandbox because ETW and an actual Windows PID are unavailable here. A provider or permission failure is expected to appear as `UNAVAILABLE` evidence in the output rather than a fabricated event.
+本轮同时修复 PID 0 使列表失败、失败时丢弃有效记录、记录过大、异常退出残留会话、迟到轮询覆盖新会话、示例重开失去来源、对比忽略 I/O 目标、未知时长补零等问题。
+
+## 可复现输入
+
+jq 来自[官方1.8.2发布](https://github.com/jqlang/jq/releases/tag/jq-1.8.2)，与用户 Drive 中的 `jq-windows-amd64.exe` SHA256一致：
+
+`a6fc67fedaf9128a3309a1e2ebb8b986aeccf70122ee46d2cb4849e423f0c627`
+
+公开CI只使用同哈希的官方字节和临时测试数据。完整包保留受控探针/jq记录、验收报告、截图与校验摘要；没有把用户私有程序发布进公开仓库。命令和复核提示词见 `VERIFY_PROMPT_ZH.md`。
+
+## 能力边界
+
+本版完成 Observe 采集、保存后分析和已有证据导航。任意原生局部变量、完整调用栈/符号解析、完整内存快照、指令级时间旅行、自动子进程采集及逐事件实时流送没有完成。不能把六类系统事件解释成全部程序内部执行；无法匹配的线程明确显示比较范围不足。

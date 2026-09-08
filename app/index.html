@@ -1,42 +1,45 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Program Microscope</title>
+  <title>Windows 程序显微镜</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app" class="app-shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">⌬</span><span>Program Microscope</span></div>
-      <div class="target-pill"><span class="target-dot"></span><span id="target-name">MyApp.exe</span><span class="muted">·</span><span id="run-status">Failed</span></div>
-      <label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Search events, functions, threads, values…" aria-label="Search trace"></label>
-      <button id="new-session" class="ghost-button" type="button">＋ New session</button>
+      <div class="brand"><span class="brand-mark">◉</span><span>程序显微镜</span><small>V0.2</small></div>
+      <label class="global-search"><span aria-hidden="true">⌕</span><input id="global-search" type="search" placeholder="搜索事件、函数、线程、值…" aria-label="搜索运行记录"></label>
+      <span id="data-source" class="source-label">未加载运行记录</span>
+      <button class="button-secondary compact" data-action="import">打开记录</button>
+      <button class="button-secondary compact" data-action="example">打开示例</button>
+      <button class="button-primary compact" data-lens="capture">＋ 新建会话</button>
     </header>
-
     <div class="workbench">
-      <aside class="sidebar" aria-label="Lenses">
-        <div class="rail-label">PROGRAM</div>
+      <aside class="sidebar" aria-label="分析镜片">
         <nav id="lens-nav">
-          <button class="nav-item active" data-lens="overview"><span class="nav-icon">▦</span>Overview</button>
-          <button class="nav-item" data-lens="timeline"><span class="nav-icon">◷</span>Timeline</button>
-          <button class="nav-item" data-lens="flow"><span class="nav-icon">⌘</span>Flow</button>
-          <button class="nav-item" data-lens="state"><span class="nav-icon">▣</span>State</button>
-          <button class="nav-item" data-lens="io"><span class="nav-icon">▤</span>I/O</button>
-          <button class="nav-item" data-lens="compare"><span class="nav-icon">⇄</span>Compare</button>
+          <button class="nav-item" data-lens="overview"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18M3 15h18"/></svg></span>总览</button>
+          <button class="nav-item" data-lens="timeline"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16h17M8 13v4M12 8v9M16 5v12M20 10v7"/></svg></span>时间线</button>
+          <button class="nav-item" data-lens="flow"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="5" rx="1"/><rect x="2" y="17" width="6" height="5" rx="1"/><rect x="16" y="17" width="6" height="5" rx="1"/><path d="M12 7v5M5 17v-5h14v5"/></svg></span>流程</button>
+          <button class="nav-item" data-lens="state"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v9h9M7 15l3-3"/></svg></span>状态</button>
+          <button class="nav-item" data-lens="io"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h17m-4-4 4 4-4 4M21 17H4m4-4-4 4 4 4"/></svg></span>输入/输出</button>
+          <button class="nav-item" data-lens="compare"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="8" height="18" rx="1"/><rect x="14" y="3" width="8" height="18" rx="1"/></svg></span>对比</button>
+          <button class="nav-item capture-nav active" data-lens="capture"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 3 14 9-14 9Z" fill="currentColor" stroke-linejoin="round"/></svg></span>开始采集</button>
         </nav>
-        <div class="sidebar-spacer"></div>
-        <button class="nav-item" data-lens="capture"><span class="nav-icon">◉</span>Capture</button>
-        <div class="rail-footer"><span class="truth-dot real"></span> evidence-first<br><span class="muted">MTP v0.1</span></div>
+        <div id="sidebar-session" class="sidebar-session"></div>
+        <div class="sidebar-bottom"><span class="status-light"></span> 本地运行证据<br><small>MTP v0.1 · Windows ETW</small></div>
       </aside>
-
       <main id="view" class="main-view" tabindex="-1"></main>
     </div>
-
-    <footer id="timeline-footer" class="timeline-footer" aria-label="Persistent execution timeline"></footer>
+    <footer id="timeline-footer" class="timeline-footer" aria-label="执行时间线"></footer>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input id="trace-file" type="file" accept=".json,.mtp,application/json" hidden>
+    <input id="compare-file" type="file" accept=".json,.mtp,application/json" hidden>
+    <dialog id="diagnostics-dialog"><div class="dialog-heading"><h2>采集诊断</h2><button data-action="close-diagnostics" aria-label="关闭">×</button></div><div id="diagnostics-body" class="scroll-panel" style="max-height:60vh;margin-top:16px"></div></dialog>
+    <dialog id="example-dialog"><div class="dialog-heading"><h2>打开示例数据</h2><button data-action="close-dialog" aria-label="关闭">×</button></div><p>以下记录用于演示分析镜片，来自预置样本。打开后将持续显示“示例数据”。</p><div class="dialog-actions"><button class="button-secondary" data-example="normal">正常运行示例</button><button class="button-primary" data-example="failure">失败运行示例</button></div></dialog>
   </div>
+  <script src="trace-core.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>
