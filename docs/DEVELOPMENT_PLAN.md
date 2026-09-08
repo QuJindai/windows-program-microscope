@@ -1,50 +1,30 @@
-# Development plan
+# 开发计划与交付范围 — V0.2
 
-## Product boundary
+本项目是独立的 Windows 桌面程序，简体中文 GUI 主导。原型约束、采集协议与代码不依赖用户其他项目。详细任务和验收步骤见 `superpowers/plans/2026-09-08-runtime-v02.md`。
 
-Program Microscope is a standalone Windows desktop product. The GUI is the product; collectors and analysis exist to make visible answers trustworthy. It does not share runtime code, schemas or release artifacts with the user's other applications.
+## 本次已实现
 
-## Milestones
+| 工作包 | 实际行为 | 验证 |
+| --- | --- | --- |
+| 桌面运行时 | 进程列表、单会话开始/查询/停止、有效部分记录保存、重新打开、PE 文件头检查 | Rust 行为测试和真实 Windows 集成 |
+| Observe 采集 | 进程、线程、模块、文件、注册表、TCP 与进程计数器；能力及丢失诊断 | 受控 Windows 探针和真实 jq 进程 |
+| 来源与边界 | REAL/DERIVED/UNAVAILABLE，CPU 百分比计算依据，明确未采集字段 | 采集器契约与 GUI 回归 |
+| 记录分析 | 显式关系图、上下游/最短路径、分叉来源、线程语义对比、首次可比差异 | Python/JavaScript 行为测试 |
+| 中文工作台 | 六个分析镜片和采集页、共享选择、底部时间线、真实导入/保存/导出 | 两种分辨率和实际 Windows 记录检查 |
+| 发布 | 自包含采集器、NSIS 安装包、源码和证据 ZIP | Windows 构建/安装/启动与逐文件摘要 |
 
-### M0 — Evidence-first prototype (this release)
+最终执行结果以 `TEST_REPORT.md`、PR 检查和交付包中的报告为准。采集期间可查看会话状态；完成或停止后加载最终记录，当前没有把每条 ETW 事件实时流送给 GUI。
 
-- Freeze the six-lens GUI and persistent timeline.
-- Define MTP v0.1 with explicit `REAL`, `DERIVED`, `UNAVAILABLE` and `DEBUG_ONLY` evidence states.
-- Provide normal/failed fixtures, value provenance and first-divergence analysis.
-- Provide a zero-dependency browser prototype and a Windows ETW Observe adapter.
-- Add contract tests and a reproducible source package.
+## 后续独立里程碑
 
-### M1 — Observe mode on Windows
+1. Observe 增强：增量事件流、子进程范围、采样调用栈、符号解析、用户操作关联；逐项验证提供程序和权限条件。
+2. Deep Trace：基于明确调试接口的函数/栈/选定变量与有界内存观察，显示开销和不可用原因。
+3. Time Travel：独立的指令记录与回放能力，以及回放一致性验证；当前没有实现。
 
-- Process/thread/image-load ETW session with PID scoping.
-- File I/O, TCP/IP, registry and window-message providers behind capability checks.
-- Ring-buffer capture, redaction and cancellation.
-- Replace fixture overview with live event stream while keeping the same GUI contract.
+## 每项能力的验收原则
 
-### M2 — Deep Trace
-
-- Optional function and stack capture using documented Windows debugging interfaces.
-- Symbol resolution through DIA/symbol paths, with unresolved frames marked explicitly.
-- Selected-value watchpoints and bounded memory snapshots.
-- “Trace value origin” links from State, Flow and Compare to shared evidence.
-
-### M3 — Compare and export
-
-- Stable event alignment and first-divergence explanations for repeated runs.
-- Perfetto export adapter (slices, counters, flows, tracks).
-- JSON/CSV evidence export and a shareable read-only report.
-
-### M4 — Time Travel (opt-in)
-
-- A separate recorder/replayer with clear overhead and disk estimates.
-- Historical value navigation and replay validation.
-- No default instrumentation: the user chooses the cost before capture starts.
-
-## Definition of done for every milestone
-
-1. A visible GUI action has a corresponding trace contract.
-2. Every displayed number is labelled as real, derived or unavailable.
-3. A failing provider produces an honest limitation card and a useful partial trace.
-4. A fixture test covers the happy path and the first likely failure.
-5. The source package can be extracted and its tests can be rerun on a clean Windows machine.
-
+- 一个可点击动作必须连到真实实现或明确显示不可用。
+- 显示值能回到来源；缺失值不能补零，时间相邻不能推成因果。
+- 异常停止保留可用证据，清理仅限本工具拥有的会话。
+- 对原始失败记录修根因，保留复现与回归；不通过放宽断言获取成功。
+- 分别记录浏览器交互、原生安装、系统采集和第三方程序的实际结果。

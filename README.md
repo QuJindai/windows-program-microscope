@@ -68,7 +68,9 @@ cargo test --manifest-path tests/runtime/Cargo.toml -- --nocapture
 
 - [本版实施规格](docs/superpowers/specs/2026-09-08-runtime-v02.md)
 - [任务计划](docs/superpowers/plans/2026-09-08-runtime-v02.md)
+- [核心升级对照](docs/CORE_UPGRADE.md)
 - [测试报告](docs/TEST_REPORT.md)
+- [完整复核提示词](docs/VERIFY_PROMPT_ZH.md)
 - [开源整合边界](docs/OPEN_SOURCE_INTEGRATION.md)
 - [原型图与提示词](docs/gui-prototypes/PROMPTS.md)
 

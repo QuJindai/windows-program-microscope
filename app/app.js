@@ -48,7 +48,7 @@ const statusLabel = item => label(item?.status || 'unknown');
 const badge = truth => `<span class="badge ${{REAL:'real',DERIVED:'derived',DEBUG_ONLY:'debug',UNAVAILABLE:'unavailable'}[truth] || 'unavailable'}">${{REAL:'真实',DERIVED:'派生',DEBUG_ONLY:'仅调试',UNAVAILABLE:'不可用'}[truth] || '未采集'}</span>`;
 const evidenceFor = item => arr('evidence').filter(e => (item?.evidence_ids || []).includes(e.id));
 const itemTruth = item => item?.truth || evidenceFor(item)[0]?.truth || 'UNAVAILABLE';
-const detailText = item => item?.outcome ? label(item.outcome) : item?.endpoint || item?.path || item?.detail || Object.entries(item?.details||{}).slice(0,2).map(([k,v])=>`${k}: ${typeof v==='object'?JSON.stringify(v):v}`).join(' · ') || '无附加详情';
+const detailText = item => item?.outcome ? label(item.outcome) : item?.endpoint || item?.path || item?.target || item?.detail || Object.entries(item?.details||{}).slice(0,2).map(([k,v])=>`${k}: ${typeof v==='object'?JSON.stringify(v):v}`).join(' · ') || '无附加详情';
 const kv = pairs => `<dl class="kv">${pairs.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v ?? '未采集')}</dd>`).join('')}</dl>`;
 const card = (title,body,cls='',small='') => `<section class="card ${cls}"><div class="card-title"><span>${title}</span>${small?`<small>${small}</small>`:''}</div><div class="card-body">${body}</div></section>`;
 const header = (title,subtitle,actions='') => `<div class="view-header"><div><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div><div class="view-actions">${actions}</div></div>`;
@@ -216,9 +216,20 @@ function eventRows(events,{io=false}={}) {
 function renderInspector() {
   const item=selected(),event=selectedEvent(),evidence=evidenceFor(item);
   if(!item)return card('选中事件','<div class="empty"><span class="empty-icon">⌖</span><p>点击事件、图节点或时间线标记，查看同一条记录的证据。</p></div>','inspector');
+  const isIo=arr('io').some(row=>String(row.id)===String(item.id));
   const details=Object.entries(item.details||{});
+  const ioFields=isIo?[
+    [item.type==='file'?'请求字节数':'字节数',item.bytes ?? null],
+    ...('bytes_sent' in item?[['发送字节数',item.bytes_sent]]:[]),
+    ...('bytes_received' in item?[['接收字节数',item.bytes_received]]:[]),
+    ['资源 ID',item.resource_id ?? null],['关联事件',item.event_id ?? null],
+    ...(item.type==='file'||item.type==='registry'||'path' in item?[['路径',item.path || null]]:[]),
+    ...(item.type==='network'||'endpoint' in item?[['端点',item.endpoint || null]]:[]),
+    ...(item.target&&item.target!==item.path&&item.target!==item.endpoint?[['目标',item.target]]:[]),
+    ...('caller' in item?[['调用者',item.caller]]:[])
+  ]:[];
   const source=evidence.map(e=>e.source).filter(Boolean).join('；') || item.source || '未记录';
-  return `<aside class="card inspector"><div class="card-title"><span>选中事件</span><small>${esc(item.id)}</small></div><div class="card-body"><div class="selected-heading"><span class="event-glyph ${itemClass(item)}">${fault(item)?'!':'◎'}</span><div><h2 class="${fault(item)?'red':'amber'}">${esc(itemLabel(item))}</h2><p class="muted number">${fmtTime(event?.start_ms)}${event?` · ${fmtDuration(observedDuration(event))}`:''}</p></div></div>${kv([['线程',event?.thread_id!=null?`线程 ${event.thread_id}`:null],['进程',state.trace?.run?.target?.name],['类别',label(item.kind||item.type)],['结果',label(item.outcome||item.status||'unknown')],['来源',source],['记录 ID',item.id]])}<h3>事件说明</h3><p class="explain">${esc(detailText(item))}。${fault(item)?'该记录标记了异常结果；具体原因请核对附带证据。':'此处仅展示记录中可验证的信息。'}</p>${details.length?`<h3>记录字段</h3>${kv(details.map(([k,v])=>[k,typeof v==='object'?JSON.stringify(v):v]))}`:''}<h3>相关证据（${evidence.length}）</h3>${evidence.length?evidence.map(e=>`<div class="evidence-item"><div><strong class="cyan">${esc(e.source)}</strong>${badge(e.truth)}</div><p>${esc(e.detail||e.description||'来源未附加说明')}</p></div>`).join(''):`<div class="evidence-item"><div><span>未附加来源证据</span>${badge('UNAVAILABLE')}</div><p>没有证据时，不将事件升级为真实或因果结论。</p></div>`}<div class="inspector-actions"><button class="button-secondary compact" data-lens="state">追溯值来源</button><button class="button-secondary compact" data-lens="timeline">转到时间线</button></div></div></aside>`;
+  return `<aside class="card inspector"><div class="card-title"><span>选中事件</span><small>${esc(item.id)}</small></div><div class="card-body"><div class="selected-heading"><span class="event-glyph ${itemClass(item)}">${fault(item)?'!':'◎'}</span><div><h2 class="${fault(item)?'red':'amber'}">${esc(itemLabel(item))}</h2><p class="muted number">${fmtTime(event?.start_ms)}${event?` · ${fmtDuration(observedDuration(event))}`:''}</p></div></div>${kv([['线程',event?.thread_id!=null?`线程 ${event.thread_id}`:null],['进程',state.trace?.run?.target?.name],['类别',label(item.kind||item.type)],['结果',label(item.outcome||item.status||'unknown')],['来源',source],['记录 ID',item.id]])}<h3>事件说明</h3><p class="explain">${esc(isIo?`${label(item.operation)}操作已记录`:detailText(item))}。${fault(item)?'该记录标记了异常结果；具体原因请核对附带证据。':'此处仅展示记录中可验证的信息。'}</p>${isIo?`<h3>I/O 记录字段</h3>${kv(ioFields)}${item.type==='file'&&item.bytes!=null?'<p class="muted io-byte-note">文件字节数为请求大小，不表示已完成或已持久写入。</p>':''}`:''}${details.length?`<h3>记录字段</h3>${kv(details.map(([k,v])=>[k,typeof v==='object'?JSON.stringify(v):v]))}`:''}<h3>相关证据（${evidence.length}）</h3>${evidence.length?evidence.map(e=>`<div class="evidence-item"><div><strong class="cyan">${esc(e.source)}</strong>${badge(e.truth)}</div><p>${esc(e.detail||e.description||'来源未附加说明')}</p></div>`).join(''):`<div class="evidence-item"><div><span>未附加来源证据</span>${badge('UNAVAILABLE')}</div><p>没有证据时，不将事件升级为真实或因果结论。</p></div>`}<div class="inspector-actions"><button class="button-secondary compact" data-lens="state">追溯值来源</button><button class="button-secondary compact" data-lens="timeline">转到时间线</button></div></div></aside>`;
 }
 function observedCounter(name) {
   const list=arr('counters').filter(c=>[c.id,c.name,c.kind,c.metric].some(n=>String(n||'').toLowerCase().includes(name)));

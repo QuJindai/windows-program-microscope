@@ -25,6 +25,22 @@ const check=async(name,fn)=>{await fn();passed.push(name);console.log('PASS',nam
     await page.evaluate(trace=>Microscope.importTrace(trace),again);
     assert.equal(await page.evaluate(()=>Microscope.getState().example),true);
   });
+  await check('actual collector I/O top-level fields and unknown values remain visible with evidence',async()=>{
+    const actual=JSON.parse(fs.readFileSync(path.join(ROOT,'tests/gui/fixtures/windows-collector-io.json')));
+    await page.evaluate(trace=>Microscope.importTrace(trace),actual);
+    await page.locator('.sidebar [data-lens="io"]').click();
+    for(const io of actual.io){
+      await page.locator(`[data-io-tab="${io.type}"]`).click();await page.evaluate(id=>Microscope.select(id),io.id);
+      const fields=await page.locator('.inspector').evaluate(el=>Object.fromEntries([...el.querySelectorAll('dt')].map(dt=>[dt.textContent,dt.nextElementSibling.textContent])));
+      assert.equal(fields[io.type==='file'?'请求字节数':'字节数'],io.bytes==null?'未采集':String(io.bytes));
+      if('path' in io)assert.equal(fields['路径'],io.path||'未采集');
+      if('endpoint' in io)assert.equal(fields['端点'],io.endpoint||'未采集');
+      assert.equal(fields['资源 ID'],io.resource_id??'未采集');assert.equal(fields['关联事件'],io.event_id);
+      assert.match(fields['来源'],/Windows kernel ETW/);assert.ok(await page.locator('.inspector .badge.real').count()>0);
+      assert.match(await page.locator('.selected-heading').innerText(),/未采集/);
+    }
+    assert.equal(await page.evaluate(()=>Microscope.getState().example),false);
+  });
   const modified=structuredClone(sample);modified.run.id='gui-derived';delete modified.run.data_origin;
   modified.evidence.forEach(e=>e.truth='DERIVED');modified.events[5].duration_ms=0;modified.events[5].duration_observed=false;
   modified.counters=[{id:'process_cpu_percent',name:'Process CPU',unit:'%',samples:[{timestamp_ms:0,value:10},{timestamp_ms:1000,value:25}],evidence_ids:['ev_process']},{id:'working_set_bytes',name:'Working set',unit:'bytes',samples:[{timestamp_ms:0,value:1048576},{timestamp_ms:1000,value:2097152}],evidence_ids:['ev_process']}];
