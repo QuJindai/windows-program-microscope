@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -193,6 +192,10 @@ internal static class Collector
         k.RegistryDeleteValue += d => s.Registry(d, "delete_value");
         k.RegistryDelete += d => s.Registry(d, "delete");
         k.RegistryClose += d => s.Registry(d, "close");
+        k.RegistryKCBCreate += d => s.RegistryKcb(d, "kcb_create");
+        k.RegistryKCBDelete += d => s.RegistryKcb(d, "kcb_delete");
+        k.RegistryKCBRundownBegin += d => s.RegistryKcb(d, "kcb_rundown_begin");
+        k.RegistryKCBRundownEnd += d => s.RegistryKcb(d, "kcb_rundown_end");
         k.TcpIpConnect += d => s.Network(d, "connect", d.saddr.ToString(), d.sport, d.daddr.ToString(), d.dport, null);
         k.TcpIpAccept += d => s.Network(d, "accept", d.saddr.ToString(), d.sport, d.daddr.ToString(), d.dport, null);
         k.TcpIpSend += d => s.Network(d, "send", d.saddr.ToString(), d.sport, d.daddr.ToString(), d.dport, d.size);
@@ -234,7 +237,7 @@ internal sealed class CaptureState
     private readonly Dictionary<string, MtpCounter> counters = new(StringComparer.Ordinal);
     private readonly List<object> diagnostics = new();
     private readonly HashSet<string> diagnosticCodes = new(StringComparer.Ordinal);
-    private readonly Dictionary<ulong, string> registryNames = new();
+    private readonly RegistryKeyCache registryNames = new();
     private double? lastCpuMs;
     private double lastCpuTime;
     private double lastSampleTime = -250;
@@ -374,26 +377,36 @@ internal sealed class CaptureState
     public void Registry(RegistryTraceData data, string operation)
     {
         if (data.ProcessID != target.Pid) return;
-        var key = data.KeyName;
-        if (!string.IsNullOrEmpty(key))
+        var payload = RegistryKeyCache.Decode(data.EventData(), data.PointerSize, data.Version);
+#pragma warning disable CS0618 // Shared monotonic ETW clock, as in Etw().
+        var resolved = registryNames.Resolve(data.KeyHandle, operation, payload.Name, data.TimeStampQPC);
+#pragma warning restore CS0618
+        var valueName = operation is "set_value" or "query_value" or "delete_value" ? payload.Name : "";
+        var details = new Dictionary<string, object?> { ["registry_key"] = resolved.Key, ["value_name"] = valueName,
+            ["key_handle"] = $"0x{data.KeyHandle:x}", ["key_name_resolution"] = resolved.Resolution };
+        if (operation is "open" or "create" or "delete") details["raw_key_name"] = payload.Name;
+        if (payload.Status is { } status)
         {
-            if (registryNames.Count >= 16384 && !registryNames.ContainsKey(data.KeyHandle))
-            { registryNames.Clear(); Diagnostic("registry_name_map_reset", "warning", "Registry handle name cache reached 16384 entries; older unresolved names remain unknown."); }
-            registryNames[data.KeyHandle] = key;
-        }
-        else registryNames.TryGetValue(data.KeyHandle, out key);
-        var details = new Dictionary<string, object?> { ["registry_key"] = key ?? "", ["value_name"] = data.ValueName, ["key_handle"] = $"0x{data.KeyHandle:x}" };
-        // In 3.2.6 RegistryTraceData.Status discards GetInt32At(8)'s return value.
-        // Decode v2+ NTSTATUS directly instead of falsely reporting success.
-        var payload = data.EventData();
-        if (data.Version >= 2 && payload.Length >= 12)
-        {
-            var status = BinaryPrimitives.ReadUInt32LittleEndian(payload.AsSpan(8, 4));
             details["ntstatus"] = $"0x{status:x8}";
-            details["result"] = status == 0 ? "success" : (status & 0x80000000) != 0 ? "failure" : "informational";
+            details["result"] = status == 0 ? "success" : (status >> 30) switch
+            { 3 => "failure", 2 => "warning", _ => "informational" };
         }
-        Etw(data, "registry", operation, key ?? "", details);
-        if (operation == "close") registryNames.Remove(data.KeyHandle);
+        Etw(data, "registry", operation, resolved.Key, details);
+        // A user-handle Close does not delete the shared KCB; only KCBDelete does.
+    }
+    public void RegistryKcb(RegistryTraceData data, string operation)
+    {
+        // KCB rundown/name records may have a system PID; they supply identity
+        // metadata, not target operations. Never filter them before mapping.
+        var payload = RegistryKeyCache.Decode(data.EventData(), data.PointerSize, data.Version);
+        var before = registryNames.ResetCount;
+#pragma warning disable CS0618
+        registryNames.Observe(data.KeyHandle, payload.Name, data.TimeStampQPC, operation == "kcb_delete");
+#pragma warning restore CS0618
+        if (registryNames.ResetCount != before) Diagnostic("registry_name_map_reset", "warning", "Registry KCB cache reached its 16384-entry/4 MiB bound; evicted names remain unresolved until observed again.");
+        if (data.ProcessID == target.Pid)
+            Etw(data, "registry", operation, payload.Name, new() { ["registry_key"] = payload.Name,
+                ["value_name"] = "", ["key_handle"] = $"0x{data.KeyHandle:x}", ["key_name_resolution"] = "kcb_payload" });
     }
     public void Network(TraceEvent data, string operation, string source, int sourcePort, string destination, int destinationPort, int? bytes)
     {

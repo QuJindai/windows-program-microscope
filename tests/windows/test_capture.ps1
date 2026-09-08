@@ -237,7 +237,8 @@ try {
         @{ Name = 'zero-duration'; Args = @('--pid', "$targetPid", '--duration', '0') },
         @{ Name = 'long-duration'; Args = @('--pid', "$targetPid", '--duration', '3601') },
         @{ Name = 'bad-duration'; Args = @('--pid', "$targetPid", '--duration', 'abc') },
-        @{ Name = 'unknown-option'; Args = @('--unknown-option') }
+        @{ Name = 'unknown-option'; Args = @('--unknown-option') },
+        @{ Name = 'unrelated-session'; Args = @('--stop-session', 'NT Kernel Logger') }
     )
     foreach ($case in $invalidCases) {
         $result = Invoke-Program $CollectorPath $case.Args "invalid-$($case.Name)"
@@ -245,6 +246,12 @@ try {
         Assert-That (-not [string]::IsNullOrWhiteSpace($result.Stderr)) "Invalid arguments '$($case.Name)' require an actionable error."
     }
     Add-Check 'Malformed arguments fail with diagnostics'
+    $absentSession = 'ProgramMicroscope-acceptance-' + [Guid]::NewGuid().ToString('N')
+    $cleanupResult = Invoke-Program $CollectorPath @('--stop-session', $absentSession) 'cleanup-absent-session'
+    Assert-That ($cleanupResult.ExitCode -eq 0) 'Scoped cleanup of an already absent session must succeed.'
+    $cleanup = ConvertFrom-Json -InputObject $cleanupResult.Stdout -AsHashtable
+    Assert-That ($cleanup.stopped -eq $true) 'Absent session cleanup must report stopped=true.'
+    Add-Check 'Scoped ETW cleanup is idempotent and rejects unrelated sessions'
 
     $tracePath = Join-Path $OutputDirectory 'capture.mtp.json'
     if (Test-Path -LiteralPath $tracePath) { Remove-Item -LiteralPath $tracePath -Force }
@@ -292,6 +299,15 @@ try {
     Assert-That (@($registryEvents | Where-Object {
         $_.details.Contains('value_name') -and $_.details.value_name -eq $completed.registry_value_name
     }).Count -gt 0) 'Registry events do not identify the actual probe value name.'
+    Assert-That (@($registryEvents | Where-Object { $_.phase -eq 'set_value' }).Count -gt 0) 'Registry set-value operation was not observed.'
+    Assert-That (@($registryEvents | Where-Object { $_.phase -eq 'query_value' }).Count -gt 0) 'Registry query-value operation was not observed.'
+    $registrySuffix = '\Software\ProgramMicroscopeProbe\' + $completed.token
+    Assert-That (@($registryEvents | Where-Object {
+        $_.phase -eq 'set_value' -and $_.details.value_name -eq $completed.registry_value_name -and
+        $_.details.Contains('key_name_resolution') -and $_.details.key_name_resolution -eq 'kcb' -and
+        ([string]$_.details.registry_key).StartsWith('\REGISTRY\USER\', [StringComparison]::OrdinalIgnoreCase) -and
+        ([string]$_.details.registry_key).EndsWith($registrySuffix, [StringComparison]::OrdinalIgnoreCase)
+    }).Count -gt 0) 'Registry set-value must resolve its full HKCU path using an observed child KCB identity.'
     Add-Check 'Unique HKCU registry key and value name observed'
 
     $networkEvents = @($trace.events | Where-Object {

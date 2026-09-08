@@ -57,6 +57,16 @@ const check=async(name,fn)=>{await fn();passed.push(name);console.log('PASS',nam
     assert.match(await page.locator('.compare-inspector').innerText(),/无可比较线程/);
     assert.equal(await page.locator('[data-action="divergence"]').count(),0);
   });
+  await check('IO projection does not duplicate its linked event on system tracks',async()=>{
+    const trace=structuredClone(sample);
+    trace.events=[{...trace.events[0],id:'linked-file',kind:'file',label:'single-file-read'}];
+    trace.io=[{...trace.io[0],id:'linked-io',kind:'file',type:'file',event_id:'linked-file',label:'single-file-read',evidence_ids:trace.events[0].evidence_ids}];
+    trace.edges=[];trace.values=[];
+    await page.evaluate(t=>Microscope.importTrace(t),trace);
+    await page.locator('.sidebar [data-lens="timeline"]').click();
+    const track=page.locator('.lane').filter({has:page.locator('.lane-label',{hasText:'文件 I/O'})});
+    assert.equal(await track.locator('.event-bar').count(),1);
+  });
   await page.close();
   const context=await browser.newContext({viewport:{width:1440,height:900}});
   await context.addInitScript(({sample})=>{

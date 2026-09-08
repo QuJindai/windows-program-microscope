@@ -1,4 +1,8 @@
-# V0.2 实施记录
-基线：5487ea8。上一轮源码 ZIP 修正已恢复；主分支未含这些改动。
-用户已授权核心升级、视觉修正、测试及代码仓提交。
-任务接口一致性：Collector CLI→Rust 由规格锁定；Rust commands→GUI 由规格锁定；TraceCore→GUI 由规格锁定。各任务写入不同目录，集成统一审核。
+# V0.2 实施进展
+
+- 仓库独立，Windows 专用，简体中文 GUI。主设计遵循原始七张原型。
+- 开发分支 `feat/v0.2-runtime-microscope`；PR #1 已提交真实采集、桥接、分析及 GUI。
+- 本地 Python/Node/Rust/采集器行为和浏览器集成测试通过；原生 Linux Tauri 编译启动通过。
+- Windows 第一轮真实ETW获得455条事件，全部数据通过MTP Schema和两种分析引擎校验。注册表值归属验收失败，已据实际记录修正KCB生命周期映射，并增加63项采集器断言。
+- Drive中的jq-windows-amd64.exe已下载，SHA256与官方jq1.8.2逐字节一致，将加入Windows第三方采集验证。
+- 最终Windows测试和打包状态以TEST_REPORT.md及CI日志为准，不用本地编译替代运行证据。

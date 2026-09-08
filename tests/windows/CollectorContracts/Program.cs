@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Buffers.Binary;
+using System.Text;
 
 // Behavioral contract tests deliberately inject test records into the bounded store.
 // They test storage/CLI semantics and are not evidence that Windows ETW ran.
@@ -22,6 +24,41 @@ foreach (var argsToReject in new[] {
 Check(CollectorOptions.Parse(["--pid", "7", "--out", "空 格.mtp.json"]).OutputPath == "空 格.mtp.json", "Output path must be preserved.");
 Check(CollectorOptions.Parse(["--capabilities"]).Command == "capabilities", "Capabilities command missing.");
 Check(CollectorOptions.Parse(["--stop-session", "ProgramMicroscope-contract_1"]).Command == "stop_session", "Scoped cleanup command missing.");
+// Regression from Windows CI: Create used parent KCB 0xffffa9003b287a40,
+// while Set/QueryValue used child KCB 0xffffa9003b2841d0. Relative Open/Create
+// records must never overwrite the parent's identity or invent the child's.
+var registry = new RegistryKeyCache();
+const ulong parentKcb = 0xffffa9003b287a40;
+const ulong childKcb = 0xffffa9003b2841d0;
+const string parentKey = @"\REGISTRY\USER\test-sid\Software\ProgramMicroscopeProbe";
+const string childName = "test-probe-token";
+var fullKey = parentKey + "\\" + childName;
+registry.Observe(parentKcb, parentKey, 10);
+Check(registry.Resolve(parentKcb, "create", childName, 11).Key == fullKey, "Create must resolve relative name against observed parent KCB.");
+Check(registry.Resolve(childKcb, "set_value", "ProbeValue_test", 12).Key == "", "Create's parent address does not identify the child KCB.");
+registry.Observe(childKcb, fullKey, 20);
+Check(registry.Resolve(childKcb, "set_value", "ProbeValue_test", 19).Key == "", "Future KCB metadata must not be attributed to an earlier operation.");
+Check(registry.Resolve(childKcb, "set_value", "ProbeValue_test", 21).Key == fullKey, "SetValue must resolve the full path from the child KCB.");
+Check(registry.Resolve(childKcb, "query_value", "ProbeValue_test", 22).Key == fullKey, "QueryValue must retain the same child KCB identity.");
+registry.Resolve(childKcb, "close", "", 23);
+Check(registry.Resolve(childKcb, "query_value", "ProbeValue_test", 24).Key == fullKey, "Closing one user handle must not destroy a shared KCB name.");
+registry.Resolve(parentKcb, "open", "AnotherChild", 25);
+Check(registry.Resolve(parentKcb, "query_value", "Value", 26).Key == parentKey, "Relative Open must not overwrite the parent's path.");
+registry.Observe(childKcb, "", 27, deleted: true);
+Check(registry.Resolve(childKcb, "query_value", "ProbeValue_test", 28).Key == "", "KCBDelete must invalidate the address before reuse.");
+Check(registry.Resolve(0, "open", @"\REGISTRY\MACHINE\absolute", 30).Resolution == "payload_absolute", "Absolute registry names must survive missing parent identity.");
+for (var i = 1; i <= RegistryKeyCache.MaxEntries + 1; i++) registry.Observe((ulong)i, "\\REGISTRY\\MACHINE\\test" + i, i);
+Check(registry.Count <= RegistryKeyCache.MaxEntries && registry.ResetCount > 0, "System-wide KCB metadata cache must stay bounded.");
+foreach (var pointerSize in new[] { 4, 8 })
+{
+    var text = Encoding.Unicode.GetBytes("ProbeValue_test\0");
+    var payload = new byte[16 + pointerSize + text.Length];
+    BinaryPrimitives.WriteUInt32LittleEndian(payload.AsSpan(8, 4), 0xc0000034);
+    text.CopyTo(payload, 16 + pointerSize);
+    var decoded = RegistryKeyCache.Decode(payload, pointerSize, 2);
+    Check(decoded.Name == "ProbeValue_test" && decoded.Status == 0xc0000034, "Registry v2 payload must preserve actual name and failure status for both pointer sizes.");
+    Check(RegistryKeyCache.Decode(payload, pointerSize, 1).Status is null, "Unsupported registry payload version must remain unknown.");
+}
 var folder = Path.Combine(Path.GetTempPath(), "microscope-contract-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(folder);
 try
